@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { BoardColumn, Card as CardType } from '@easytodo/db';
-	import { dndzone, type DndEvent } from 'svelte-dnd-action';
+	import { dndzone, dragHandle, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import Card from './Card.svelte';
 
@@ -10,12 +10,21 @@
 		onOpenCard: (card: CardType) => void;
 		onAddCard: (columnId: number) => void;
 		onRename: (columnId: number, name: string) => void;
+		onDelete: (columnId: number) => void;
 		onCardsReorder: (columnId: number, cards: CardType[]) => void;
 		onConsider: (columnId: number, cards: CardType[]) => void;
 	}
 
-	let { column, hue, onOpenCard, onAddCard, onRename, onCardsReorder, onConsider }: Props =
-		$props();
+	let {
+		column,
+		hue,
+		onOpenCard,
+		onAddCard,
+		onRename,
+		onDelete,
+		onCardsReorder,
+		onConsider
+	}: Props = $props();
 
 	let items = $state<CardType[]>([]);
 	let dragOver = $state(false);
@@ -54,6 +63,9 @@
 
 <section class="column" data-hue={hue} aria-label={column.name}>
 	<header class="column-head">
+		<span class="column-grip" use:dragHandle aria-label="Reorder {column.name}" title="Drag to reorder"
+			>⠿</span
+		>
 		{#if renaming}
 			<input
 				class="column-tag"
@@ -75,6 +87,15 @@
 			onclick={() => onAddCard(column.id)}
 		>
 			＋
+		</button>
+		<button
+			type="button"
+			class="column-del"
+			title="Delete {column.name}"
+			aria-label="Delete column {column.name}"
+			onclick={() => onDelete(column.id)}
+		>
+			×
 		</button>
 	</header>
 

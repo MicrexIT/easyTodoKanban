@@ -66,3 +66,22 @@ export function hueForIndex(i: number): string {
 	const palette = ['todo', 'doing', 'done'] as const;
 	return palette[i % palette.length];
 }
+
+const NAMED_HUES: Record<string, string> = {
+	todo: 'todo',
+	backlog: 'todo',
+	inbox: 'todo',
+	doing: 'doing',
+	inprogress: 'doing',
+	wip: 'doing',
+	done: 'done',
+	complete: 'done',
+	completed: 'done',
+	shipped: 'done'
+};
+
+/** Hue follows the column's name when it has a known meaning, so reordering never swaps colours. */
+export function hueForColumn(name: string, index: number): string {
+	const key = name.toLowerCase().replace(/[^a-z]/g, '');
+	return NAMED_HUES[key] ?? hueForIndex(index);
+}

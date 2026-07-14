@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { BoardColumn, Card as CardType, Project } from '@easytodo/db';
 	import { invalidateAll } from '$app/navigation';
+	import { dragHandleZone, type DndEvent } from 'svelte-dnd-action';
+	import { flip } from 'svelte/animate';
 	import Column from './Column.svelte';
 	import CardModal from './CardModal.svelte';
-	import { hueForIndex } from '$lib/markdown';
+	import { hueForColumn } from '$lib/markdown';
 
 	interface Props {
 		project: Project;
@@ -24,6 +26,8 @@
 	let activeColumnName = $state('');
 	let toast = $state('');
 	let isMobile = $state(false);
+
+	const flipDurationMs = 180;
 
 	$effect(() => {
 		if (typeof window === 'undefined') return;
@@ -137,6 +141,45 @@
 		}
 	}
 
+	function onColumnsConsider(e: CustomEvent<DndEvent<BoardColumn>>) {
+		localColumns = e.detail.items;
+	}
+
+	async function onColumnsFinalize(e: CustomEvent<DndEvent<BoardColumn>>) {
+		const items = e.detail.items;
+		localColumns = items;
+
+		const movedId = Number(e.detail.info.id);
+		const idx = items.findIndex((c) => c.id === movedId);
+		if (idx === -1) return;
+		// null means "last" — reorderColumn appends when there is no column after it.
+		const beforeColumnId = items[idx + 1]?.id ?? null;
+
+		try {
+			await postJson('/api/reorder-column', { columnId: movedId, beforeColumnId });
+		} catch (err) {
+			showToast(err instanceof Error ? err.message : 'reorder failed');
+		}
+		await invalidateAll();
+	}
+
+	async function onDeleteColumn(columnId: number) {
+		const col = localColumns.find((c) => c.id === columnId);
+		if (!col) return;
+		if (col.cards.length > 0) {
+			const n = col.cards.length;
+			showToast(`"${col.name}" has ${n} card${n === 1 ? '' : 's'} — move or archive them first`);
+			return;
+		}
+		if (!confirm(`delete column "${col.name}"?`)) return;
+		try {
+			await postJson('/api/delete-column', { columnId });
+			await invalidateAll();
+		} catch (e) {
+			showToast(e instanceof Error ? e.message : 'delete failed');
+		}
+	}
+
 	async function addColumn() {
 		const name = prompt('column name');
 		if (!name?.trim()) return;
@@ -167,17 +210,32 @@
 </script>
 
 <main class="board">
-	{#each localColumns as col, i (col.id)}
-		<Column
-			column={col}
-			hue={hueForIndex(i)}
-			onOpenCard={openCard}
-			onAddCard={onAddCard}
-			onRename={onRename}
-			onCardsReorder={onCardsReorder}
-			onConsider={onConsider}
-		/>
-	{/each}
+	<div
+		class="board-columns"
+		use:dragHandleZone={{
+			items: localColumns,
+			flipDurationMs,
+			type: 'column',
+			dropTargetStyle: {}
+		}}
+		onconsider={onColumnsConsider}
+		onfinalize={onColumnsFinalize}
+	>
+		{#each localColumns as col, i (col.id)}
+			<div class="column-slot" animate:flip={{ duration: flipDurationMs }}>
+				<Column
+					column={col}
+					hue={hueForColumn(col.name, i)}
+					onOpenCard={openCard}
+					onAddCard={onAddCard}
+					onRename={onRename}
+					onDelete={onDeleteColumn}
+					onCardsReorder={onCardsReorder}
+					onConsider={onConsider}
+				/>
+			</div>
+		{/each}
+	</div>
 	<button type="button" class="add-column" onclick={addColumn}>＋ add column</button>
 </main>
 

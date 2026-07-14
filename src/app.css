@@ -158,8 +158,20 @@ select {
 	overflow-x: auto;
 	min-height: 0;
 }
-.column {
+.board-columns {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: flex-start;
+	gap: 18px;
+	min-height: 0;
+}
+.column-slot {
+	/* svelte-dnd-action host around each column */
 	flex: 0 0 296px;
+	list-style: none;
+}
+.column {
+	width: 100%;
 	background: var(--surface);
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
@@ -211,6 +223,24 @@ select {
 	font-size: 11px;
 	color: var(--ink-3);
 }
+.column-grip {
+	display: inline-flex;
+	align-items: center;
+	font-family: var(--mono);
+	font-size: 13px;
+	line-height: 1;
+	color: var(--ink-3);
+	padding: 3px 2px;
+	border-radius: 5px;
+	cursor: grab;
+	touch-action: none;
+	user-select: none;
+}
+.column-grip:hover,
+.column-grip:focus-visible {
+	color: var(--ink-2);
+	background: color-mix(in srgb, var(--ink-3) 16%, transparent);
+}
 .column-add {
 	margin-left: auto;
 	border: 0;
@@ -225,6 +255,31 @@ select {
 .column-add:hover {
 	color: var(--accent);
 	background: var(--accent-soft);
+}
+.column-del {
+	border: 0;
+	background: none;
+	color: var(--ink-3);
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	padding: 2px 6px;
+	border-radius: 6px;
+}
+.column-del:hover,
+.column-del:focus-visible {
+	color: var(--danger);
+	background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+/* keep the destructive control quiet until the column is hovered/focused */
+@media (hover: hover) {
+	.column-del {
+		opacity: 0;
+	}
+	.column:hover .column-del,
+	.column-del:focus-visible {
+		opacity: 1;
+	}
 }
 
 .cards {
@@ -715,9 +770,14 @@ select.move {
 		gap: 12px;
 		padding: 14px 12px 20px;
 	}
-	.column {
+	.board-columns {
+		gap: 12px;
+	}
+	.column-slot {
 		flex-basis: 84vw;
 		scroll-snap-align: center;
+	}
+	.column {
 		max-height: calc(100vh - 80px);
 	}
 	.add-column {

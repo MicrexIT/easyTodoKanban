@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { hueForIndex, relativeTime, renderMarkdown } from '$lib/markdown';
+	import { hueForColumn, relativeTime, renderMarkdown } from '$lib/markdown';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -16,7 +16,9 @@
 	});
 
 	const html = $derived(renderMarkdown(data.card.body_md));
-	const hue = $derived(hueForIndex(data.columnIndex >= 0 ? data.columnIndex : 0));
+	const hue = $derived(
+		hueForColumn(data.card.column_name, data.columnIndex >= 0 ? data.columnIndex : 0)
+	);
 </script>
 
 <svelte:head>
