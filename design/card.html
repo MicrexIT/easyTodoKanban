@@ -1,0 +1,262 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>easytodo — #36</title>
+<style>
+  /* ================================================================
+     easyTodoKanban — open item view (route: /c/<id>)
+     Tokens are copied from board.html, which stays canonical.
+     ================================================================ */
+  :root {
+    --bg:        #E7EAEE;
+    --dot:       #C7CDD5;
+    --surface:   #F2F4F7;
+    --card:      #FFFFFF;
+    --ink:       #1C242E;
+    --ink-2:     #5A6572;
+    --ink-3:     #8B95A1;
+    --line:      #D8DDE3;
+    --accent:    #2F6E5E;
+    --accent-soft: #2F6E5E22;
+    --danger:    #A34B3D;
+    --hue-todo:  #66707E;
+    --hue-doing: #B06E15;
+    --hue-done:  #427E54;
+    --shadow: 0 1px 2px rgba(28,36,46,.08), 0 4px 14px rgba(28,36,46,.07);
+    --radius: 8px;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181D; --dot: #242B33; --surface: #1B2127; --card: #222932;
+      --ink: #E6EAEE; --ink-2: #9AA5B1; --ink-3: #69747F; --line: #2B333C;
+      --accent: #4FA98F; --accent-soft: #4FA98F26; --danger: #C46A5B;
+      --hue-todo: #9AA4B1; --hue-doing: #D6913C; --hue-done: #6BAA7E;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--ink);
+    background-color: var(--bg);
+    background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* ---- top bar (same as board, breadcrumb variant) ------------------ */
+  .topbar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .logotype {
+    font-family: var(--mono); font-size: 14px; font-weight: 600;
+    letter-spacing: .02em; white-space: nowrap; text-decoration: none; color: var(--ink);
+  }
+  .logotype .tick { color: var(--accent); }
+  .crumbs {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-3);
+    display: flex; align-items: center; gap: 6px; min-width: 0;
+  }
+  .crumbs a { color: var(--ink-2); text-decoration: none; }
+  .crumbs a:hover { color: var(--ink); }
+  .topbar-right {
+    margin-left: auto; font-family: var(--mono); font-size: 11px;
+  }
+  .topbar-right a { color: var(--ink-3); text-decoration: none; }
+  .topbar-right a:hover { color: var(--ink); }
+
+  /* ---- item sheet ---------------------------------------------------- */
+  .sheet-wrap { padding: 28px 16px 60px; }
+  .sheet {
+    max-width: 720px; margin: 0 auto;
+    background: var(--card);
+    border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+
+  .sheet-head {
+    padding: 20px 24px 0;
+  }
+  .status-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+  }
+  .column-tag {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--hue, var(--ink-2));
+    background: color-mix(in srgb, var(--hue, var(--ink-3)) 14%, transparent);
+    padding: 3px 9px; border-radius: 5px;
+  }
+  [data-hue="doing"] { --hue: var(--hue-doing); }
+  .status-row .id { color: var(--hue, var(--ink-3)); font-weight: 600; }
+  .status-row .actions { margin-left: auto; display: flex; gap: 4px; }
+
+  .item-title {
+    font: 650 22px/1.25 var(--sans); margin: 14px 0 6px;
+  }
+  .item-facts {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+    padding-bottom: 14px; border-bottom: 1px solid var(--line);
+  }
+
+  /* move control: where the card sits, changeable from here */
+  .btn {
+    font: 600 12.5px var(--sans); border-radius: 7px; cursor: pointer;
+    padding: 6px 12px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink);
+  }
+  .btn:hover { border-color: var(--ink-3); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.07); }
+  .btn-quiet { background: none; border-color: transparent; color: var(--ink-3); }
+  .btn-quiet:hover { color: var(--danger); }
+  button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  select.move {
+    font: 600 11px var(--mono); letter-spacing: .06em;
+    color: var(--ink-2); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px;
+  }
+
+  /* ---- body: rendered markdown --------------------------------------- */
+  .item-body { padding: 18px 24px 8px; font-size: 14.5px; line-height: 1.6; }
+  .item-body p { margin: 0 0 10px; }
+  .item-body h3 {
+    font: 700 11.5px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-2); margin: 20px 0 6px;
+  }
+  .item-body code {
+    font-family: var(--mono); font-size: 13px;
+    background: var(--accent-soft); border-radius: 4px; padding: 1px 5px;
+  }
+  .item-body ul { margin: 6px 0 10px; padding-left: 22px; }
+  .item-body ul.md-check { list-style: none; padding-left: 2px; }
+  .item-body ul.md-check li { display: flex; gap: 8px; align-items: baseline; margin: 3px 0; }
+  .item-body .box { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .md-check li.done { color: var(--ink-3); }
+  .md-check li.done .txt { text-decoration: line-through; }
+  .md-check li.done .box { color: var(--hue-done); }
+
+  /* ---- edit mode ------------------------------------------------------ */
+  .item-editor { padding: 12px 24px 8px; }
+  .item-editor textarea {
+    width: 100%; min-height: 320px; border: 0; resize: vertical;
+    font: 13px/1.65 var(--mono); color: var(--ink); background: none; padding: 6px 0;
+  }
+  .item-editor textarea:focus { outline: none; }
+  [hidden] { display: none !important; }
+
+  .sheet-foot {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 24px 18px; border-top: 1px solid var(--line); margin-top: 12px;
+  }
+  .sheet-foot .spacer { margin-left: auto; }
+  .foot-hint { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+
+  @media (max-width: 640px) {
+    .sheet-wrap { padding: 0; }
+    .sheet { border-radius: 0; border-left: 0; border-right: 0; max-width: none; }
+    .crumbs .project-crumb { display: none; }  /* keep breadcrumb short on phone */
+    .item-title { font-size: 19px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<header class="topbar">
+  <a class="logotype" href="board.html"><span class="tick">▤</span> easytodo</a>
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a class="project-crumb" href="board.html">main</a>
+    <span class="project-crumb">/</span>
+    <a href="board.html">← board</a>
+  </nav>
+  <div class="topbar-right"><a href="#">archived</a></div>
+</header>
+
+<main class="sheet-wrap">
+  <article class="sheet" data-hue="doing">
+
+    <header class="sheet-head">
+      <div class="status-row">
+        <span class="column-tag">Doing</span>
+        <span class="id">#36</span>
+        <span class="actions">
+          <select class="move" title="Move to column" aria-label="Move to column">
+            <option>todo</option>
+            <option selected>doing</option>
+            <option>done</option>
+          </select>
+          <button class="btn" id="editBtn">edit</button>
+        </span>
+      </div>
+      <h1 class="item-title">Rinascita: WhatsApp → draft-upload bot brief</h1>
+      <div class="item-facts">created 2026-07-10 · updated 20m ago</div>
+    </header>
+
+    <!-- rendered markdown (read mode) -->
+    <div class="item-body" id="readPane">
+      <p>Scope the editorial flow with <strong>human review</strong> before publish.</p>
+      <h3>Open questions</h3>
+      <ul>
+        <li>who approves drafts — Anna or rotating editor?</li>
+        <li>media handling: images via WhatsApp are compressed, need original upload path</li>
+        <li>auth: map WhatsApp numbers to CMS users in <code>editors.json</code></li>
+      </ul>
+      <h3>Next</h3>
+      <ul class="md-check">
+        <li><span class="box">[ ]</span> <span class="txt">30min call with the editorial team</span></li>
+        <li><span class="box">[ ]</span> <span class="txt">write the one-pager</span></li>
+      </ul>
+    </div>
+
+    <!-- markdown source (edit mode) -->
+    <div class="item-editor" id="editPane" hidden>
+      <textarea spellcheck="false">Scope the editorial flow with **human review** before publish.
+
+### Open questions
+- who approves drafts — Anna or rotating editor?
+- media handling: images via WhatsApp are compressed, need original upload path
+- auth: map WhatsApp numbers to CMS users in `editors.json`
+
+### Next
+- [ ] 30min call with the editorial team
+- [ ] write the one-pager</textarea>
+    </div>
+
+    <footer class="sheet-foot">
+      <button class="btn btn-quiet">archive</button>
+      <span class="foot-hint" id="footHint">markdown · edited from board or by agents via mcp</span>
+      <span class="spacer"></span>
+      <button class="btn" id="cancelBtn" hidden>cancel</button>
+      <button class="btn btn-primary" id="saveBtn" hidden>save</button>
+    </footer>
+
+  </article>
+</main>
+
+<script>
+  // Mockup-only: read <-> edit toggle. Real app: /c/<id> route, form action.
+  const readPane = document.getElementById('readPane');
+  const editPane = document.getElementById('editPane');
+  const editBtn  = document.getElementById('editBtn');
+  const saveBtn  = document.getElementById('saveBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+
+  function setEditing(on) {
+    readPane.hidden = on; editPane.hidden = !on;
+    saveBtn.hidden = cancelBtn.hidden = !on; editBtn.hidden = on;
+    if (on) editPane.querySelector('textarea').focus();
+  }
+  editBtn.addEventListener('click', () => setEditing(true));
+  saveBtn.addEventListener('click', () => setEditing(false));
+  cancelBtn.addEventListener('click', () => setEditing(false));
+</script>

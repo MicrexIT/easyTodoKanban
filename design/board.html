@@ -1,0 +1,446 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>easytodo — board</title>
+<style>
+  /* ================================================================
+     easyTodoKanban — design reference (static mockup)
+     Tokens below are the design system. See design/DESIGN.md.
+     ================================================================ */
+  :root {
+    --bg:        #E7EAEE;   /* drafting-paper grey-blue */
+    --dot:       #C7CdD5;   /* dot grid */
+    --surface:   #F2F4F7;   /* column strip */
+    --card:      #FFFFFF;
+    --ink:       #1C242E;
+    --ink-2:     #5A6572;
+    --ink-3:     #8B95A1;
+    --line:      #D8DDE3;
+    --accent:    #2F6E5E;   /* verdigris — interaction voice only */
+    --accent-soft: #2F6E5E22;
+    --danger:    #A34B3D;
+    --hue-todo:  #66707E;
+    --hue-doing: #B06E15;
+    --hue-done:  #427E54;
+    --shadow: 0 1px 2px rgba(28,36,46,.08), 0 4px 14px rgba(28,36,46,.07);
+    --shadow-lift: 0 2px 4px rgba(28,36,46,.12), 0 10px 28px rgba(28,36,46,.16);
+    --radius: 8px;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181D; --dot: #242B33; --surface: #1B2127; --card: #222932;
+      --ink: #E6EAEE; --ink-2: #9AA5B1; --ink-3: #69747F; --line: #2B333C;
+      --accent: #4FA98F; --accent-soft: #4FA98F26; --danger: #C46A5B;
+      --hue-todo: #9AA4B1; --hue-doing: #D6913C; --hue-done: #6BAA7E;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+      --shadow-lift: 0 2px 4px rgba(0,0,0,.4), 0 12px 30px rgba(0,0,0,.45);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--ink);
+    background-color: var(--bg);
+    background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+    background-size: 22px 22px;
+    display: flex; flex-direction: column;
+  }
+
+  /* ---- top bar ---------------------------------------------------- */
+  .topbar {
+    display: flex; align-items: center; gap: 20px;
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .logotype {
+    font-family: var(--mono); font-size: 14px; font-weight: 600;
+    letter-spacing: .02em; white-space: nowrap;
+  }
+  .logotype .tick { color: var(--accent); }
+
+  .projects { display: flex; gap: 4px; overflow-x: auto; }
+  .project-tab {
+    font-family: var(--mono); font-size: 12px;
+    padding: 5px 12px; border-radius: 999px;
+    border: 1px solid transparent; background: none; color: var(--ink-2);
+    cursor: pointer; white-space: nowrap;
+  }
+  .project-tab:hover { color: var(--ink); border-color: var(--line); }
+  .project-tab[aria-current="true"] {
+    background: var(--card); border-color: var(--line);
+    color: var(--ink); font-weight: 600;
+  }
+  .topbar-right {
+    margin-left: auto; display: flex; align-items: center; gap: 14px;
+    font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+  }
+  .topbar-right a { color: var(--ink-3); text-decoration: none; }
+  .topbar-right a:hover { color: var(--ink); }
+
+  /* ---- board ------------------------------------------------------ */
+  .board {
+    flex: 1; display: flex; align-items: flex-start; gap: 18px;
+    padding: 22px 20px 28px;
+    overflow-x: auto;
+  }
+  .column {
+    flex: 0 0 296px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    max-height: 100%;
+    display: flex; flex-direction: column;
+  }
+  .column[data-hue="todo"]  { --hue: var(--hue-todo); }
+  .column[data-hue="doing"] { --hue: var(--hue-doing); }
+  .column[data-hue="done"]  { --hue: var(--hue-done); }
+
+  .column-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 12px 8px;
+  }
+  /* the label chip — column identity, like a label taped on the strip */
+  .column-tag {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--hue, var(--ink-2));
+    background: color-mix(in srgb, var(--hue, var(--ink-3)) 14%, transparent);
+    padding: 3px 9px; border-radius: 5px;
+  }
+  .column-count {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+  }
+  .column-add {
+    margin-left: auto;
+    border: 0; background: none; color: var(--ink-3); cursor: pointer;
+    font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 6px;
+  }
+  .column-add:hover { color: var(--accent); background: var(--accent-soft); }
+
+  .cards {
+    list-style: none; margin: 0; padding: 4px 10px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    overflow-y: auto; min-height: 40px;
+  }
+
+  /* ---- card ------------------------------------------------------- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 10px 12px 8px;
+    cursor: grab;
+  }
+  .card:hover { border-color: var(--ink-3); }
+  .card:focus-visible, .project-tab:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .card.dragging { opacity: .45; transform: rotate(1.2deg); }
+  .card-title { font-size: 14px; font-weight: 600; line-height: 1.35; }
+
+  .card-body {
+    margin-top: 6px; font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
+  }
+  .card-body p { margin: 0 0 4px; }
+  .card-body code {
+    font-family: var(--mono); font-size: 11.5px;
+    background: var(--accent-soft); border-radius: 4px; padding: 1px 4px;
+  }
+  .card-body ul.md-check { margin: 2px 0 0; padding: 0; list-style: none; }
+  .card-body ul.md-check li { display: flex; gap: 6px; align-items: baseline; }
+  .card-body .box { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .md-check li.done { color: var(--ink-3); }
+  .md-check li.done .txt { text-decoration: line-through; }
+  .md-check li.done .box { color: var(--hue-done); }
+
+  .card-meta {
+    margin-top: 8px; display: flex; gap: 10px;
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-3);
+  }
+  .card-meta .id { color: var(--hue, var(--ink-3)); }
+
+  /* drop indicator: a slot that appears while dragging over a gap */
+  .drop-slot {
+    height: 3px; border-radius: 2px; background: var(--accent);
+    margin: -4px 2px; opacity: 0; transition: opacity .1s;
+  }
+  .drop-slot.active { opacity: 1; }
+  .cards.drag-over { background: var(--accent-soft); border-radius: 6px; }
+
+  .add-column {
+    flex: 0 0 240px;
+    border: 1.5px dashed var(--line); border-radius: var(--radius);
+    background: none; color: var(--ink-3);
+    font-family: var(--mono); font-size: 12px;
+    padding: 14px; cursor: pointer; text-align: left;
+  }
+  .add-column:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ---- card modal -------------------------------------------------- */
+  dialog.card-modal {
+    border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow-lift);
+    background: var(--card); color: var(--ink);
+    padding: 0; width: min(560px, calc(100vw - 32px));
+  }
+  dialog.card-modal::backdrop { background: rgba(20, 26, 33, .45); }
+  .modal-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-3);
+  }
+  .modal-head .path b { color: var(--ink-2); font-weight: 600; }
+  .modal-open-full { margin-left: auto; color: var(--ink-3); text-decoration: none; }
+  .modal-open-full:hover { color: var(--accent); }
+  .modal-close {
+    border: 0; background: none; color: var(--ink-3);
+    font-size: 18px; cursor: pointer; line-height: 1; padding: 2px 6px;
+  }
+  .modal-close:hover { color: var(--ink); }
+  .modal-body { padding: 16px; }
+  .title-input {
+    width: 100%; border: 0; padding: 0 0 10px;
+    font: 600 17px/1.3 var(--sans); color: var(--ink); background: none;
+  }
+  .title-input:focus { outline: none; }
+
+  .editor-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); }
+  .editor-tab {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em;
+    padding: 6px 12px; border: 0; background: none; color: var(--ink-3);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .editor-tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+  .editor-write textarea {
+    width: 100%; min-height: 180px; border: 0; resize: vertical;
+    font: 12.5px/1.6 var(--mono); color: var(--ink);
+    background: none; padding: 12px 2px;
+  }
+  .editor-write textarea:focus { outline: none; }
+  .editor-preview { padding: 12px 2px; font-size: 13.5px; line-height: 1.55; color: var(--ink); min-height: 180px; }
+  .editor-preview h3 { font-size: 13px; font-family: var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 12px 0 4px; }
+  .editor-preview code { font-family: var(--mono); font-size: 12px; background: var(--accent-soft); border-radius: 4px; padding: 1px 4px; }
+  .editor-preview ul { margin: 4px 0; padding-left: 20px; }
+  [hidden] { display: none !important; }
+
+  .modal-foot {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-top: 1px solid var(--line);
+  }
+  .btn {
+    font: 600 12.5px var(--sans); border-radius: 7px; cursor: pointer;
+    padding: 7px 14px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink);
+  }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; margin-left: auto; }
+  .btn-primary:hover { filter: brightness(1.07); }
+  .btn-quiet { background: none; border-color: transparent; color: var(--ink-3); }
+  .btn-quiet:hover { color: var(--danger); }
+  .modal-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+
+  /* ---- mobile ------------------------------------------------------ */
+  @media (max-width: 640px) {
+    .board { scroll-snap-type: x mandatory; gap: 12px; padding: 14px 12px 20px; }
+    .column { flex-basis: 84vw; scroll-snap-align: center; }
+    .add-column { flex-basis: 60vw; scroll-snap-align: center; }
+    .topbar { gap: 12px; padding: 10px 12px; }
+    .topbar-right .hint { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<header class="topbar">
+  <div class="logotype"><span class="tick">▤</span> easytodo</div>
+  <nav class="projects" aria-label="Projects">
+    <button class="project-tab" aria-current="true">main</button>
+    <button class="project-tab">attraversamenti</button>
+    <button class="project-tab">labsyncoura</button>
+    <button class="project-tab" title="New project">+</button>
+  </nav>
+  <div class="topbar-right">
+    <span class="hint">drag to move · click to edit</span>
+    <a href="#">archived</a>
+  </div>
+</header>
+
+<main class="board">
+
+  <section class="column" data-hue="todo" aria-label="Todo">
+    <header class="column-head">
+      <span class="column-tag">Todo</span>
+      <span class="column-count">4</span>
+      <button class="column-add" title="Add card to Todo">＋</button>
+    </header>
+    <ul class="cards">
+      <li class="card" draggable="true" tabindex="0">
+        <div class="card-title">Cold outreach batch — 10 Italian manufacturers</div>
+        <div class="card-body">
+          <ul class="md-check">
+            <li class="done"><span class="box">[x]</span> <span class="txt">shortlist from LinkedIn</span></li>
+            <li><span class="box">[ ]</span> <span class="txt">draft opener variants</span></li>
+            <li><span class="box">[ ]</span> <span class="txt">send Tue morning</span></li>
+          </ul>
+        </div>
+        <div class="card-meta"><span class="id">#41</span><span>updated 2h ago</span></div>
+      </li>
+      <li class="card" draggable="true" tabindex="0">
+        <div class="card-title">aictx: positioning notes v3</div>
+        <div class="card-meta"><span class="id">#38</span><span>updated yesterday</span></div>
+      </li>
+      <li class="card" draggable="true" tabindex="0">
+        <div class="card-title">Renew rivistarinascita.it domain</div>
+        <div class="card-body"><p>Expires <code>2026-08-02</code> — check auto-renew first.</p></div>
+        <div class="card-meta"><span class="id">#44</span><span>updated 3d ago</span></div>
+      </li>
+      <li class="card" draggable="true" tabindex="0">
+        <div class="card-title">Write up MCP kanban setup for the blog</div>
+        <div class="card-meta"><span class="id">#45</span><span>updated 3d ago</span></div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="column" data-hue="doing" aria-label="Doing">
+    <header class="column-head">
+      <span class="column-tag">Doing</span>
+      <span class="column-count">2</span>
+      <button class="column-add" title="Add card to Doing">＋</button>
+    </header>
+    <ul class="cards">
+      <li class="card" draggable="true" tabindex="0" data-open-modal>
+        <div class="card-title">Rinascita: WhatsApp → draft-upload bot brief</div>
+        <div class="card-body">
+          <p>Scope the editorial flow with <code>human review</code> before publish. Open questions in body.</p>
+        </div>
+        <div class="card-meta"><span class="id">#36</span><span>updated 20m ago</span></div>
+      </li>
+      <li class="card" draggable="true" tabindex="0">
+        <div class="card-title">LabSyncOura newsletter #12</div>
+        <div class="card-body">
+          <ul class="md-check">
+            <li class="done"><span class="box">[x]</span> <span class="txt">outline</span></li>
+            <li><span class="box">[ ]</span> <span class="txt">draft + send preview</span></li>
+          </ul>
+        </div>
+        <div class="card-meta"><span class="id">#29</span><span>updated 1h ago</span></div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="column" data-hue="done" aria-label="Done">
+    <header class="column-head">
+      <span class="column-tag">Done</span>
+      <span class="column-count">2</span>
+      <button class="column-add" title="Add card to Done">＋</button>
+    </header>
+    <ul class="cards">
+      <li class="card" draggable="true" tabindex="0">
+        <div class="card-title">easytodo: spec + implementation plan</div>
+        <div class="card-meta"><span class="id">#42</span><span>updated today</span></div>
+      </li>
+      <li class="card" draggable="true" tabindex="0">
+        <div class="card-title">Invoice Rinascita — June</div>
+        <div class="card-meta"><span class="id">#33</span><span>updated 4d ago</span></div>
+      </li>
+    </ul>
+  </section>
+
+  <button class="add-column">＋ add column</button>
+</main>
+
+<!-- ---- card editor modal (opens from card #36) ---------------------- -->
+<dialog class="card-modal" id="cardModal">
+  <header class="modal-head">
+    <span class="path"><b>main / doing</b> · #36</span>
+    <a class="modal-open-full" href="card.html" title="Open full view">open ⤢</a>
+    <button class="modal-close" title="Close" data-close-modal>×</button>
+  </header>
+  <div class="modal-body">
+    <input class="title-input" value="Rinascita: WhatsApp → draft-upload bot brief">
+    <div class="editor-tabs" role="tablist">
+      <button class="editor-tab" role="tab" aria-selected="true" data-tab="write">write</button>
+      <button class="editor-tab" role="tab" aria-selected="false" data-tab="preview">preview</button>
+    </div>
+    <div class="editor-write" data-pane="write">
+      <textarea spellcheck="false">Scope the editorial flow with **human review** before publish.
+
+### Open questions
+- who approves drafts — Anna or rotating editor?
+- media handling: images via WhatsApp are compressed, need original upload path
+- auth: map WhatsApp numbers to CMS users in `editors.json`
+
+### Next
+- [ ] 30min call with the editorial team
+- [ ] write the one-pager</textarea>
+    </div>
+    <div class="editor-preview" data-pane="preview" hidden>
+      <p>Scope the editorial flow with <strong>human review</strong> before publish.</p>
+      <h3>Open questions</h3>
+      <ul>
+        <li>who approves drafts — Anna or rotating editor?</li>
+        <li>media handling: images via WhatsApp are compressed, need original upload path</li>
+        <li>auth: map WhatsApp numbers to CMS users in <code>editors.json</code></li>
+      </ul>
+      <h3>Next</h3>
+      <ul class="md-check">
+        <li><span class="box">[ ]</span> <span class="txt">30min call with the editorial team</span></li>
+        <li><span class="box">[ ]</span> <span class="txt">write the one-pager</span></li>
+      </ul>
+    </div>
+  </div>
+  <footer class="modal-foot">
+    <button class="btn btn-quiet">archive</button>
+    <span class="modal-meta">created 2026-07-10 · updated 20m ago</span>
+    <button class="btn btn-primary" data-close-modal>save</button>
+  </footer>
+</dialog>
+
+<script>
+  // Mockup-only behavior, kept minimal on purpose. The real app replaces
+  // all of this; the visual states (.dragging, .drag-over, .drop-slot) are
+  // the part to preserve.
+
+  // --- modal -----------------------------------------------------------
+  const modal = document.getElementById('cardModal');
+  document.querySelector('[data-open-modal]').addEventListener('click', () => modal.showModal());
+  modal.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => modal.close()));
+
+  // --- write / preview tabs ---------------------------------------------
+  modal.querySelectorAll('.editor-tab').forEach(tab => tab.addEventListener('click', () => {
+    modal.querySelectorAll('.editor-tab').forEach(t => t.setAttribute('aria-selected', t === tab));
+    modal.querySelectorAll('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== tab.dataset.tab);
+  }));
+
+  // --- drag & drop demo (HTML5 DnD; real app uses svelte-dnd-action) ----
+  let dragged = null;
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      dragged = card; card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      dragged?.classList.remove('dragging'); dragged = null;
+      document.querySelectorAll('.cards').forEach(l => l.classList.remove('drag-over'));
+    });
+  });
+  document.querySelectorAll('.cards').forEach(list => {
+    list.addEventListener('dragover', e => {
+      e.preventDefault(); list.classList.add('drag-over');
+      const after = [...list.querySelectorAll('.card:not(.dragging)')]
+        .find(c => e.clientY < c.getBoundingClientRect().top + c.offsetHeight / 2);
+      if (dragged) after ? list.insertBefore(dragged, after) : list.appendChild(dragged);
+    });
+    list.addEventListener('dragleave', e => {
+      if (!list.contains(e.relatedTarget)) list.classList.remove('drag-over');
+    });
+    list.addEventListener('drop', e => { e.preventDefault(); list.classList.remove('drag-over'); });
+  });
+</script>
