@@ -9,17 +9,25 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "easytodo-web",
 	"compatibility_date": "2025-07-01",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
+	"routes": [
+		{
+			"pattern": "todos.remics.tech",
+			"custom_domain": true
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "easy-todo-kanban",
-			"database_id": "00000000-0000-0000-0000-000000000001",
+			"database_id": "4ced0539-3926-4811-b6ee-2601eabe4559",
 			"migrations_dir": "packages/db/migrations"
 		}
 	]

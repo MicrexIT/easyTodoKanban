@@ -12,7 +12,7 @@
 		{
 			"binding": "DB",
 			"database_name": "easy-todo-kanban",
-			"database_id": "00000000-0000-0000-0000-000000000001",
+			"database_id": "4ced0539-3926-4811-b6ee-2601eabe4559",
 			"migrations_dir": "../../packages/db/migrations"
 		}
 	]

@@ -15,7 +15,7 @@
 		"db:migrate:remote": "wrangler d1 migrations apply easy-todo-kanban --remote",
 		"dev:mcp": "pnpm --filter @easytodo/mcp dev",
 		"deploy:web": "pnpm build && wrangler deploy",
-		"deploy:mcp": "pnpm --filter @easytodo/mcp deploy"
+		"deploy:mcp": "pnpm --filter @easytodo/mcp run deploy"
 	},
 	"dependencies": {
 		"@easytodo/db": "workspace:*",
