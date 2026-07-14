@@ -1,0 +1,19 @@
+/**
+ * easyTodoKanban MCP Worker — Streamable HTTP at /mcp
+ * Same D1 database as the web app. Auth: Bearer MCP_TOKEN secret.
+ */
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "easytodo-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-07-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "easy-todo-kanban",
+			"database_id": "00000000-0000-0000-0000-000000000001",
+			"migrations_dir": "../../packages/db/migrations"
+		}
+	]
+}

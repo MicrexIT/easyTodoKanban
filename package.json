@@ -1,0 +1,37 @@
+{
+	"name": "easytodokanban",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"test": "pnpm --filter @easytodo/db test",
+		"db:migrate:local": "wrangler d1 migrations apply easy-todo-kanban --local",
+		"db:migrate:remote": "wrangler d1 migrations apply easy-todo-kanban --remote",
+		"dev:mcp": "pnpm --filter @easytodo/mcp dev",
+		"deploy:web": "pnpm build && wrangler deploy",
+		"deploy:mcp": "pnpm --filter @easytodo/mcp deploy"
+	},
+	"dependencies": {
+		"@easytodo/db": "workspace:*",
+		"dompurify": "^3.2.6",
+		"marked": "^16.1.1",
+		"svelte-dnd-action": "^0.9.65"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250712.0",
+		"@sveltejs/adapter-cloudflare": "^7.1.1",
+		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"svelte": "^5.56.1",
+		"svelte-check": "^4.6.0",
+		"typescript": "^5.9.2",
+		"vite": "^7.1.0",
+		"wrangler": "^4.24.0"
+	}
+}

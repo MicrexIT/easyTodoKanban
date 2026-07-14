@@ -1,0 +1,26 @@
+/**
+ * easyTodoKanban — Cloudflare Worker (SvelteKit web UI)
+ * D1 binding shared with apps/mcp.
+ *
+ * After first deploy / D1 create, replace database_id with the real id from:
+ *   wrangler d1 create easy-todo-kanban
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "easytodo-web",
+	"compatibility_date": "2025-07-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "easy-todo-kanban",
+			"database_id": "00000000-0000-0000-0000-000000000001",
+			"migrations_dir": "packages/db/migrations"
+		}
+	]
+}
