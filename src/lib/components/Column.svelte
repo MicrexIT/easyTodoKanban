@@ -166,6 +166,8 @@
 	<div
 		class="cards"
 		class:drag-over={dragOver}
+		class:is-empty={items.length === 0}
+		aria-label={items.length === 0 ? `Empty ${column.name} column. Drop a card here.` : undefined}
 		use:dndzone={{
 			items,
 			flipDurationMs,
@@ -182,9 +184,6 @@
 			</div>
 		{/each}
 	</div>
-	{#if items.length === 0}
-		<div class="column-empty">empty — drop a card or ＋</div>
-	{/if}
 	<button
 		type="button"
 		class="column-resizer"
