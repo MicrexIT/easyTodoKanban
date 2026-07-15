@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { BoardColumn, Card as CardType, Project } from '@easytodo/db';
+	import type { BoardColumn, CardWithAttachments as CardType, Project } from '@easytodo/db';
 	import { invalidateAll } from '$app/navigation';
 	import { dragHandleZone, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
@@ -26,6 +26,15 @@
 	let activeColumnName = $state('');
 	let toast = $state('');
 	let isMobile = $state(false);
+
+	interface PendingCardMove {
+		cardId: number;
+		columnId: number;
+		beforeCardId: number | null;
+	}
+
+	let pendingCardMoves: PendingCardMove[] = [];
+	let isSavingCardMoves = false;
 
 	const flipDurationMs = 180;
 
@@ -74,38 +83,51 @@
 		return res.json().catch(() => ({}));
 	}
 
-	async function onCardsReorder(columnId: number, cards: CardType[]) {
-		// Update local column list
+	async function savePendingCardMoves() {
+		if (isSavingCardMoves) return;
+		isSavingCardMoves = true;
+
+		try {
+			while (pendingCardMoves.length > 0) {
+				const move = pendingCardMoves.shift();
+				if (!move) continue;
+				await postJson('/api/move-card', move);
+			}
+		} catch (e) {
+			pendingCardMoves = [];
+			showToast(e instanceof Error ? e.message : 'move failed');
+			await invalidateAll();
+		} finally {
+			isSavingCardMoves = false;
+			// A drop can be finalized while the failure refresh is in progress.
+			if (pendingCardMoves.length > 0) void savePendingCardMoves();
+		}
+	}
+
+	function queueCardMove(move: PendingCardMove) {
+		// If the same card is moved again before its previous queued save starts,
+		// only the latest destination matters. In-flight saves remain serialized.
+		pendingCardMoves = pendingCardMoves.filter((pending) => pending.cardId !== move.cardId);
+		pendingCardMoves.push(move);
+		void savePendingCardMoves();
+	}
+
+	function onCardsReorder(columnId: number, cards: CardType[], movedCardId: number | null) {
+		// Both source and target columns finalize a cross-column drop. Always update
+		// the optimistic UI, but persist only the target column's finalize event.
 		localColumns = localColumns.map((c) =>
 			c.id === columnId ? { ...c, cards: cards.map((x) => ({ ...x, column_id: columnId })) } : c
 		);
 
-		// Find which card moved (from another column or reordered)
-		// We send moves for every card whose column_id or position neighbors changed.
-		// Simpler: for each card in the new list, if previous column differed or order changed, move with before_card_id.
-		try {
-			for (let i = 0; i < cards.length; i++) {
-				const card = cards[i];
-				const before = cards[i + 1]?.id ?? null;
-				const prevCol = columns.flatMap((c) => c.cards).find((x) => x.id === card.id);
-				const prevSameCol = columns.find((c) => c.id === columnId)?.cards ?? [];
-				const prevIdx = prevSameCol.findIndex((x) => x.id === card.id);
-				const prevBefore = prevIdx >= 0 ? (prevSameCol[prevIdx + 1]?.id ?? null) : null;
-				const movedCol = prevCol?.column_id !== columnId;
-				const movedOrder = prevIdx !== i || prevBefore !== before;
-				if (movedCol || movedOrder) {
-					await postJson('/api/move-card', {
-						cardId: card.id,
-						columnId,
-						beforeCardId: before
-					});
-				}
-			}
-			await invalidateAll();
-		} catch (e) {
-			showToast(e instanceof Error ? e.message : 'move failed');
-			await invalidateAll();
-		}
+		if (movedCardId === null) return;
+		const movedIndex = cards.findIndex((card) => card.id === movedCardId);
+		if (movedIndex === -1) return;
+
+		queueCardMove({
+			cardId: movedCardId,
+			columnId,
+			beforeCardId: cards[movedIndex + 1]?.id ?? null
+		});
 	}
 
 	function onConsider(columnId: number, cards: CardType[]) {

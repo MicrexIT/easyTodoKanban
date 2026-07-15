@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { BoardColumn, Card as CardType } from '@easytodo/db';
-	import { dndzone, dragHandle, type DndEvent } from 'svelte-dnd-action';
+	import type { BoardColumn, CardWithAttachments as CardType } from '@easytodo/db';
+	import { dndzone, dragHandle, TRIGGERS, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import Card from './Card.svelte';
 
@@ -11,7 +11,7 @@
 		onAddCard: (columnId: number) => void;
 		onRename: (columnId: number, name: string) => void;
 		onDelete: (columnId: number) => void;
-		onCardsReorder: (columnId: number, cards: CardType[]) => void;
+		onCardsReorder: (columnId: number, cards: CardType[], movedCardId: number | null) => void;
 		onConsider: (columnId: number, cards: CardType[]) => void;
 	}
 
@@ -46,7 +46,13 @@
 	function handleFinalize(e: CustomEvent<DndEvent<CardType>>) {
 		items = e.detail.items as CardType[];
 		dragOver = false;
-		onCardsReorder(column.id, items);
+		const movedCardId = Number(e.detail.info.id);
+		const shouldPersist = e.detail.info.trigger === TRIGGERS.DROPPED_INTO_ZONE;
+		onCardsReorder(
+			column.id,
+			items,
+			shouldPersist && Number.isFinite(movedCardId) ? movedCardId : null
+		);
 	}
 
 	function startRename() {

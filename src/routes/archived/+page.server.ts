@@ -4,10 +4,12 @@ import { getDb } from '$lib/server/db';
 import {
 	deleteCardPermanently,
 	getDefaultProject,
+	listCardAttachmentKeys,
 	listArchived,
 	listProjects,
 	restoreCard
 } from '@easytodo/db';
+import { deleteMediaObjects, getMediaBucket } from '$lib/server/media';
 
 export const load: PageServerLoad = async (event) => {
 	const db = getDb(event);
@@ -38,8 +40,12 @@ export const actions: Actions = {
 	delete: async (event) => {
 		const db = getDb(event);
 		const data = await event.request.formData();
+		const cardId = Number(data.get('cardId'));
 		try {
-			await deleteCardPermanently(db, Number(data.get('cardId')));
+			const keys = await listCardAttachmentKeys(db, cardId);
+			const bucket = getMediaBucket(event, keys.length > 0);
+			await deleteCardPermanently(db, cardId);
+			await deleteMediaObjects(bucket, keys);
 			return { ok: true };
 		} catch (e) {
 			return fail(400, { message: e instanceof Error ? e.message : 'delete failed' });

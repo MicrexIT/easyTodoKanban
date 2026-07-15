@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Card as CardType } from '@easytodo/db';
+	import type { CardWithAttachments as CardType } from '@easytodo/db';
 	import { relativeTime, renderMarkdown } from '$lib/markdown';
 
 	interface Props {
@@ -34,6 +34,14 @@
 	onclick={handleClick}
 	onkeydown={handleKey}
 >
+	{#if card.attachments[0]}
+		<img
+			class="card-cover"
+			src="/api/attachments/{card.attachments[0].id}"
+			alt=""
+			loading="lazy"
+		/>
+	{/if}
 	<div class="card-title">{card.title}</div>
 	{#if preview}
 		<div class="card-body">{@html preview}</div>

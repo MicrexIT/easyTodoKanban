@@ -2,6 +2,8 @@ import { positionBetween, needsRenumber, renumberPositions } from './position.js
 import type {
 	Board,
 	Card,
+	CardAttachment,
+	CardDetail,
 	CardWithContext,
 	Column,
 	D1Database,
@@ -113,11 +115,29 @@ export async function getBoard(
 		.bind(project.id)
 		.all<Card>();
 
-	const byColumn = new Map<number, Card[]>();
+	const { results: attachments } = await db
+		.prepare(
+			`SELECT card_attachments.* FROM card_attachments
+       INNER JOIN cards ON cards.id = card_attachments.card_id
+       INNER JOIN columns ON columns.id = cards.column_id
+       WHERE columns.project_id = ?
+       ORDER BY card_attachments.created_at ASC, card_attachments.id ASC`
+		)
+		.bind(project.id)
+		.all<CardAttachment>();
+
+	const byCard = new Map<number, CardAttachment[]>();
+	for (const attachment of attachments) {
+		const list = byCard.get(attachment.card_id) ?? [];
+		list.push(attachment);
+		byCard.set(attachment.card_id, list);
+	}
+
+	const byColumn = new Map<number, Array<Card & { attachments: CardAttachment[] }>>();
 	for (const col of columns) byColumn.set(col.id, []);
 	for (const card of cards) {
 		const list = byColumn.get(card.column_id);
-		if (list) list.push(card);
+		if (list) list.push({ ...card, attachments: byCard.get(card.id) ?? [] });
 	}
 
 	return {
@@ -126,7 +146,7 @@ export async function getBoard(
 	};
 }
 
-export async function getCard(db: D1Database, cardId: number): Promise<CardWithContext> {
+export async function getCard(db: D1Database, cardId: number): Promise<CardDetail> {
 	const row = await db
 		.prepare(
 			`SELECT cards.*, columns.name AS column_name, columns.project_id,
@@ -139,7 +159,114 @@ export async function getCard(db: D1Database, cardId: number): Promise<CardWithC
 		.bind(cardId)
 		.first<CardWithContext>();
 	if (!row) throw new DbError(`card #${cardId} not found`);
-	return row;
+	return { ...row, attachments: await listCardAttachments(db, cardId) };
+}
+
+export async function listCardAttachments(
+	db: D1Database,
+	cardId: number
+): Promise<CardAttachment[]> {
+	const { results } = await db
+		.prepare(
+			`SELECT * FROM card_attachments
+       WHERE card_id = ? ORDER BY created_at ASC, id ASC`
+		)
+		.bind(cardId)
+		.all<CardAttachment>();
+	return results;
+}
+
+export async function getCardAttachment(
+	db: D1Database,
+	attachmentId: string
+): Promise<CardAttachment> {
+	const attachment = await db
+		.prepare('SELECT * FROM card_attachments WHERE id = ?')
+		.bind(attachmentId)
+		.first<CardAttachment>();
+	if (!attachment) throw new DbError(`attachment '${attachmentId}' not found`);
+	return attachment;
+}
+
+export async function createCardAttachment(
+	db: D1Database,
+	attachment: Omit<CardAttachment, 'created_at'>
+): Promise<CardAttachment> {
+	const card = await db
+		.prepare('SELECT id FROM cards WHERE id = ?')
+		.bind(attachment.card_id)
+		.first<{ id: number }>();
+	if (!card) throw new DbError(`card #${attachment.card_id} not found`);
+
+	await db
+		.prepare(
+			`INSERT INTO card_attachments
+       (id, card_id, object_key, file_name, content_type, byte_size, width, height)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+		)
+		.bind(
+			attachment.id,
+			attachment.card_id,
+			attachment.object_key,
+			attachment.file_name,
+			attachment.content_type,
+			attachment.byte_size,
+			attachment.width,
+			attachment.height
+		)
+		.run();
+	return getCardAttachment(db, attachment.id);
+}
+
+export async function deleteCardAttachment(
+	db: D1Database,
+	attachmentId: string
+): Promise<void> {
+	const attachment = await getCardAttachment(db, attachmentId);
+	await db.prepare('DELETE FROM card_attachments WHERE id = ?').bind(attachment.id).run();
+}
+
+export async function listCardAttachmentKeys(
+	db: D1Database,
+	cardId: number
+): Promise<string[]> {
+	const { results } = await db
+		.prepare('SELECT object_key FROM card_attachments WHERE card_id = ?')
+		.bind(cardId)
+		.all<{ object_key: string }>();
+	return results.map((row) => row.object_key);
+}
+
+export async function listProjectAttachmentKeys(
+	db: D1Database,
+	projectRef: string | number
+): Promise<string[]> {
+	const project = await resolveProject(db, projectRef);
+	const { results } = await db
+		.prepare(
+			`SELECT card_attachments.object_key FROM card_attachments
+       INNER JOIN cards ON cards.id = card_attachments.card_id
+       INNER JOIN columns ON columns.id = cards.column_id
+       WHERE columns.project_id = ?`
+		)
+		.bind(project.id)
+		.all<{ object_key: string }>();
+	return results.map((row) => row.object_key);
+}
+
+export async function listColumnAttachmentKeys(
+	db: D1Database,
+	columnId: number
+): Promise<string[]> {
+	const { results } = await db
+		.prepare(
+			`SELECT card_attachments.object_key FROM card_attachments
+       INNER JOIN cards ON cards.id = card_attachments.card_id
+       WHERE cards.column_id = ?`
+		)
+		.bind(columnId)
+		.all<{ object_key: string }>();
+	return results.map((row) => row.object_key);
 }
 
 async function maxPosition(
@@ -587,23 +714,78 @@ export async function renameProject(
 	return updated;
 }
 
+export async function reorderProject(
+	db: D1Database,
+	projectId: number,
+	beforeProjectId?: number | null
+): Promise<Project> {
+	const existing = await db
+		.prepare('SELECT * FROM projects WHERE id = ?')
+		.bind(projectId)
+		.first<Project>();
+	if (!existing) throw new DbError(`project #${projectId} not found`);
+
+	const { results } = await db
+		.prepare(
+			`SELECT id, position FROM projects WHERE id != ?
+       ORDER BY position ASC, id ASC`
+		)
+		.bind(projectId)
+		.all<{ id: number; position: number }>();
+
+	let prev: number | null = null;
+	let next: number | null = null;
+	if (beforeProjectId != null) {
+		const index = results.findIndex((project) => project.id === beforeProjectId);
+		if (index === -1) throw new DbError(`before project #${beforeProjectId} not found`);
+		next = results[index].position;
+		prev = index > 0 ? results[index - 1].position : null;
+	} else {
+		prev = results.at(-1)?.position ?? null;
+	}
+
+	if (needsRenumber(prev, next)) {
+		await renumberProjects(db);
+		return reorderProject(db, projectId, beforeProjectId);
+	}
+
+	await db
+		.prepare('UPDATE projects SET position = ? WHERE id = ?')
+		.bind(positionBetween(prev, next), projectId)
+		.run();
+	const updated = await db
+		.prepare('SELECT * FROM projects WHERE id = ?')
+		.bind(projectId)
+		.first<Project>();
+	if (!updated) throw new DbError(`project #${projectId} not found`);
+	return updated;
+}
+
 export async function deleteProject(
 	db: D1Database,
 	projectRef: string | number
 ): Promise<void> {
 	const project = await resolveProject(db, projectRef);
+	const projects = await listProjects(db);
+	if (projects.length <= 1) throw new DbError('the last board cannot be deleted');
+	const replacement = projects.find((candidate) => candidate.id !== project.id);
+	if (!replacement) throw new DbError('no replacement board found');
+
+	const statements: D1PreparedStatement[] = [
+		db
+			.prepare(
+				`DELETE FROM cards WHERE column_id IN (SELECT id FROM columns WHERE project_id = ?)`
+			)
+			.bind(project.id),
+		db.prepare('DELETE FROM columns WHERE project_id = ?').bind(project.id),
+		db.prepare('DELETE FROM projects WHERE id = ?').bind(project.id)
+	];
 	if (project.is_default) {
-		throw new DbError(`project '${project.name}' is the default and cannot be deleted`);
+		statements.push(
+			db.prepare('UPDATE projects SET is_default = 1 WHERE id = ?').bind(replacement.id)
+		);
 	}
-	// Cascade: delete cards in project's columns, then columns, then project
-	await db
-		.prepare(
-			`DELETE FROM cards WHERE column_id IN (SELECT id FROM columns WHERE project_id = ?)`
-		)
-		.bind(project.id)
-		.run();
-	await db.prepare('DELETE FROM columns WHERE project_id = ?').bind(project.id).run();
-	await db.prepare('DELETE FROM projects WHERE id = ?').bind(project.id).run();
+	await db.batch(statements);
 }
 
 export async function getDefaultProject(db: D1Database): Promise<Project> {

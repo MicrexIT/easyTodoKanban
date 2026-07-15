@@ -1,7 +1,8 @@
 <script lang="ts">
-	import type { Card as CardType, Project } from '@easytodo/db';
+	import type { CardWithAttachments as CardType, Project } from '@easytodo/db';
 	import { renderMarkdown, relativeTime } from '$lib/markdown';
 	import { enhance } from '$app/forms';
+	import AttachmentGallery from './AttachmentGallery.svelte';
 
 	interface Props {
 		open: boolean;
@@ -68,6 +69,7 @@
 			<input type="hidden" name="cardId" value={cardId} />
 			<div class="modal-body">
 				<input class="title-input" name="title" bind:value={title} required />
+				<AttachmentGallery cardId={cardId} attachments={card.attachments} compact />
 				<div class="editor-tabs" role="tablist">
 					<button
 						type="button"

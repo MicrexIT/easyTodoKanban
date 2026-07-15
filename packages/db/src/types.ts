@@ -25,8 +25,24 @@ export type Card = {
 	updated_at: string;
 };
 
+export type CardAttachment = {
+	id: string;
+	card_id: number;
+	object_key: string;
+	file_name: string;
+	content_type: string;
+	byte_size: number;
+	width: number;
+	height: number;
+	created_at: string;
+};
+
+export type CardWithAttachments = Card & {
+	attachments: CardAttachment[];
+};
+
 export type BoardColumn = Column & {
-	cards: Card[];
+	cards: CardWithAttachments[];
 };
 
 export type Board = {
@@ -41,6 +57,10 @@ export type CardWithContext = Card & {
 	project_slug: string;
 };
 
+export type CardDetail = CardWithContext & {
+	attachments: CardAttachment[];
+};
+
 /** Minimal D1 surface used by this package (works with real D1 and tests). */
 export type D1PreparedStatement = {
 	bind(...values: unknown[]): D1PreparedStatement;
@@ -51,7 +71,7 @@ export type D1PreparedStatement = {
 
 export type D1Database = {
 	prepare(query: string): D1PreparedStatement;
-	batch<T = unknown>(statements: D1PreparedStatement[]): Promise<T[]>;
+	batch(statements: D1PreparedStatement[]): Promise<unknown[]>;
 	exec(query: string): Promise<unknown>;
 };
 

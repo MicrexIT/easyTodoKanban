@@ -1,19 +1,19 @@
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
-import type { D1Database } from '@easytodo/db';
 import { createKanbanServer } from './tools';
 
-export interface Env {
-	DB: D1Database;
+type WorkerEnv = Env & {
 	MCP_TOKEN: string;
-}
+};
+
+const textEncoder = new TextEncoder();
 
 function timingSafeEqual(a: string, b: string): boolean {
-	const max = Math.max(a.length, b.length);
-	let out = a.length === b.length ? 0 : 1;
-	for (let i = 0; i < max; i++) {
-		out |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+	const aBytes = textEncoder.encode(a);
+	const bBytes = textEncoder.encode(b);
+	if (aBytes.byteLength !== bBytes.byteLength) {
+		return !crypto.subtle.timingSafeEqual(aBytes, aBytes);
 	}
-	return out === 0;
+	return crypto.subtle.timingSafeEqual(aBytes, bBytes);
 }
 
 function unauthorized(): Response {
@@ -23,7 +23,7 @@ function unauthorized(): Response {
 	});
 }
 
-function checkAuth(request: Request, env: Env): boolean {
+function checkAuth(request: Request, env: WorkerEnv): boolean {
 	const header = request.headers.get('Authorization') ?? '';
 	const match = /^Bearer\s+(.+)$/i.exec(header);
 	if (!match) return false;
@@ -33,7 +33,7 @@ function checkAuth(request: Request, env: Env): boolean {
 }
 
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request: Request, env: WorkerEnv): Promise<Response> {
 		const url = new URL(request.url);
 
 		if (url.pathname === '/' || url.pathname === '/health') {
@@ -44,7 +44,7 @@ export default {
 			if (!checkAuth(request, env)) return unauthorized();
 
 			// Stateless Streamable HTTP — new server+transport per request
-			const server = createKanbanServer(env.DB);
+			const server = createKanbanServer(env.DB, env.MEDIA);
 			const transport = new WebStandardStreamableHTTPServerTransport({
 				// no sessionIdGenerator => stateless
 				enableJsonResponse: true
@@ -55,4 +55,4 @@ export default {
 
 		return new Response('Not found', { status: 404 });
 	}
-};
+} satisfies ExportedHandler<WorkerEnv>;

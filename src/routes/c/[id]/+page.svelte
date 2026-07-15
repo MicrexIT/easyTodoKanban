@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { hueForColumn, relativeTime, renderMarkdown } from '$lib/markdown';
+	import AttachmentGallery from '$lib/components/AttachmentGallery.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -73,6 +74,7 @@
 					<div class="item-editor">
 						<input class="title-input" name="title" bind:value={title} required />
 						<textarea name="body_md" bind:value={body} spellcheck="false"></textarea>
+						<AttachmentGallery cardId={data.card.id} attachments={data.card.attachments} />
 					</div>
 					<div class="sheet-foot">
 						<button type="button" class="btn" onclick={() => (editing = false)}>cancel</button>
@@ -86,6 +88,7 @@
 						data.card.updated_at
 					)}
 				</div>
+				<AttachmentGallery cardId={data.card.id} attachments={data.card.attachments} />
 				<div class="item-body">
 					{#if html}
 						{@html html}

@@ -9,6 +9,7 @@ declare global {
 		interface Platform {
 			env: {
 				DB: import('@easytodo/db').D1Database;
+				MEDIA: R2Bucket;
 			};
 			context: {
 				waitUntil(promise: Promise<unknown>): void;

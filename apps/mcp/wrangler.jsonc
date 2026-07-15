@@ -6,7 +6,7 @@
 	"$schema": "../../node_modules/wrangler/config-schema.json",
 	"name": "easytodo-mcp",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-07-01",
+	"compatibility_date": "2026-07-15",
 	"compatibility_flags": ["nodejs_compat"],
 	"d1_databases": [
 		{
@@ -14,6 +14,12 @@
 			"database_name": "easy-todo-kanban",
 			"database_id": "4ced0539-3926-4811-b6ee-2601eabe4559",
 			"migrations_dir": "../../packages/db/migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "easytodo-media"
 		}
 	]
 }

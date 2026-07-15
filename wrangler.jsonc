@@ -30,5 +30,16 @@
 			"database_id": "4ced0539-3926-4811-b6ee-2601eabe4559",
 			"migrations_dir": "packages/db/migrations"
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "easytodo-media"
+		},
+		{
+			"bucket_name": "easytodo-media",
+			"binding": "easytodo_media",
+			"remote": true
+		}
 	]
 }
