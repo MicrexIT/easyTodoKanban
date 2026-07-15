@@ -174,7 +174,7 @@
 		>
 	</nav>
 	<div class="topbar-right">
-		<span class="hint">drag to move · click to edit</span>
+		<span class="hint">drag to move · pull edge to resize · click to edit</span>
 		<a href={archivedHref}>archived</a>
 	</div>
 </header>

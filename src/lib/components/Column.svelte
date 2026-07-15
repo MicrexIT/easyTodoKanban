@@ -6,6 +6,8 @@
 
 	interface Props {
 		column: BoardColumn;
+		width: number;
+		defaultWidth: number;
 		hue: string;
 		onOpenCard: (card: CardType) => void;
 		onAddCard: (columnId: number) => void;
@@ -13,29 +15,38 @@
 		onDelete: (columnId: number) => void;
 		onCardsReorder: (columnId: number, cards: CardType[], movedCardId: number | null) => void;
 		onConsider: (columnId: number, cards: CardType[]) => void;
+		onResize: (columnId: number, width: number, persist: boolean) => void;
 	}
 
 	let {
 		column,
+		width,
+		defaultWidth,
 		hue,
 		onOpenCard,
 		onAddCard,
 		onRename,
 		onDelete,
 		onCardsReorder,
-		onConsider
+		onConsider,
+		onResize
 	}: Props = $props();
 
 	let items = $state<CardType[]>([]);
 	let dragOver = $state(false);
 	let renaming = $state(false);
 	let nameDraft = $state('');
+	let resizing = $state(false);
+	let resizePointerId: number | null = null;
+	let resizeStartX = 0;
+	let resizeStartWidth = 0;
 
 	$effect(() => {
 		items = column.cards.map((c) => ({ ...c }));
 	});
 
 	const flipDurationMs = 180;
+	const keyboardResizeStep = 24;
 
 	function handleConsider(e: CustomEvent<DndEvent<CardType>>) {
 		items = e.detail.items as CardType[];
@@ -65,9 +76,56 @@
 		const n = nameDraft.trim();
 		if (n && n !== column.name) onRename(column.id, n);
 	}
+
+	function startResize(event: PointerEvent) {
+		if (event.button !== 0) return;
+		event.preventDefault();
+		event.stopPropagation();
+		resizing = true;
+		resizePointerId = event.pointerId;
+		resizeStartX = event.clientX;
+		resizeStartWidth = width;
+		(event.currentTarget as HTMLButtonElement).setPointerCapture(event.pointerId);
+	}
+
+	function moveResize(event: PointerEvent) {
+		if (!resizing || event.pointerId !== resizePointerId) return;
+		onResize(column.id, resizeStartWidth + event.clientX - resizeStartX, false);
+	}
+
+	function finishResize(event: PointerEvent) {
+		if (!resizing || event.pointerId !== resizePointerId) return;
+		const handle = event.currentTarget as HTMLButtonElement;
+		onResize(column.id, resizeStartWidth + event.clientX - resizeStartX, true);
+		resizing = false;
+		resizePointerId = null;
+		if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+	}
+
+	function cancelResize(event: PointerEvent) {
+		if (!resizing || event.pointerId !== resizePointerId) return;
+		const handle = event.currentTarget as HTMLButtonElement;
+		onResize(column.id, width, true);
+		resizing = false;
+		resizePointerId = null;
+		if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+	}
+
+	function resizeWithKeyboard(event: KeyboardEvent) {
+		if (event.key === 'Home') {
+			event.preventDefault();
+			onResize(column.id, defaultWidth, true);
+			return;
+		}
+		if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+		event.preventDefault();
+		const direction = event.key === 'ArrowRight' ? 1 : -1;
+		const step = event.shiftKey ? keyboardResizeStep * 3 : keyboardResizeStep;
+		onResize(column.id, width + direction * step, true);
+	}
 </script>
 
-<section class="column" data-hue={hue} aria-label={column.name}>
+<section class="column" class:resizing data-hue={hue} aria-label={column.name}>
 	<header class="column-head">
 		<span class="column-grip" use:dragHandle aria-label="Reorder {column.name}" title="Drag to reorder"
 			>⠿</span
@@ -127,4 +185,21 @@
 	{#if items.length === 0}
 		<div class="column-empty">empty — drop a card or ＋</div>
 	{/if}
+	<button
+		type="button"
+		class="column-resizer"
+		aria-label="Resize {column.name} column, currently {width} pixels"
+		title="Drag to resize · arrow keys adjust · Home resets"
+		onpointerdown={startResize}
+		onpointermove={moveResize}
+		onpointerup={finishResize}
+		onpointercancel={cancelResize}
+		onlostpointercapture={cancelResize}
+		onkeydown={resizeWithKeyboard}
+		ondblclick={(event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			onResize(column.id, defaultWidth, true);
+		}}
+	></button>
 </section>

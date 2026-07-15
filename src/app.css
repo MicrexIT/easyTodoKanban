@@ -171,10 +171,11 @@ select {
 }
 .column-slot {
 	/* svelte-dnd-action host around each column */
-	flex: 0 0 296px;
+	flex: 0 0 var(--column-width, 296px);
 	list-style: none;
 }
 .column {
+	position: relative;
 	width: 100%;
 	background: var(--surface);
 	border: 1px solid var(--line);
@@ -182,6 +183,41 @@ select {
 	max-height: calc(100vh - 90px);
 	display: flex;
 	flex-direction: column;
+}
+.column-resizer {
+	position: absolute;
+	z-index: 4;
+	top: 8px;
+	right: -10px;
+	bottom: 8px;
+	width: 19px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	cursor: col-resize;
+	touch-action: none;
+}
+.column-resizer::before {
+	content: '';
+	position: absolute;
+	top: 10px;
+	right: 8px;
+	bottom: 10px;
+	width: 2px;
+	border-radius: 999px;
+	background: transparent;
+	transition:
+		background-color 120ms ease,
+		box-shadow 120ms ease;
+}
+.column-resizer:hover::before,
+.column-resizer:focus-visible::before,
+.column.resizing .column-resizer::before {
+	background: var(--accent);
+	box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.column.resizing {
+	user-select: none;
 }
 .column[data-hue='todo'],
 [data-hue='todo'] {
@@ -995,6 +1031,9 @@ select.move {
 	}
 	.column {
 		max-height: calc(100vh - 80px);
+	}
+	.column-resizer {
+		display: none;
 	}
 	.add-column {
 		flex-basis: 60vw;

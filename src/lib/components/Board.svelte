@@ -26,6 +26,7 @@
 	let activeColumnName = $state('');
 	let toast = $state('');
 	let isMobile = $state(false);
+	let columnWidths = $state<Record<number, number>>({});
 
 	interface PendingCardMove {
 		cardId: number;
@@ -37,6 +38,62 @@
 	let isSavingCardMoves = false;
 
 	const flipDurationMs = 180;
+	const defaultColumnWidth = 296;
+	const minColumnWidth = 260;
+	const maxColumnWidth = 720;
+	const columnWidthStoragePrefix = 'easytodo:column-widths:';
+
+	function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+		return typeof value === 'object' && value !== null && !Array.isArray(value);
+	}
+
+	function normalizeColumnWidth(width: number) {
+		return Math.round(Math.min(maxColumnWidth, Math.max(minColumnWidth, width)));
+	}
+
+	function loadColumnWidths(projectId: number) {
+		try {
+			const stored = localStorage.getItem(`${columnWidthStoragePrefix}${projectId}`);
+			if (!stored) return {};
+			const parsed: unknown = JSON.parse(stored);
+			if (!isUnknownRecord(parsed)) return {};
+
+			const widths: Record<number, number> = {};
+			for (const [id, width] of Object.entries(parsed)) {
+				const columnId = Number(id);
+				if (Number.isInteger(columnId) && typeof width === 'number' && Number.isFinite(width)) {
+					widths[columnId] = normalizeColumnWidth(width);
+				}
+			}
+			return widths;
+		} catch {
+			return {};
+		}
+	}
+
+	function getColumnWidth(columnId: number) {
+		return columnWidths[columnId] ?? defaultColumnWidth;
+	}
+
+	function onColumnResize(columnId: number, width: number, persist: boolean) {
+		const nextWidths = { ...columnWidths, [columnId]: normalizeColumnWidth(width) };
+		columnWidths = nextWidths;
+		if (!persist) return;
+
+		try {
+			localStorage.setItem(
+				`${columnWidthStoragePrefix}${project.id}`,
+				JSON.stringify(nextWidths)
+			);
+		} catch {
+			// Resizing still works when browser storage is unavailable.
+		}
+	}
+
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		columnWidths = loadColumnWidths(project.id);
+	});
 
 	$effect(() => {
 		if (typeof window === 'undefined') return;
@@ -244,9 +301,15 @@
 		onfinalize={onColumnsFinalize}
 	>
 		{#each localColumns as col, i (col.id)}
-			<div class="column-slot" animate:flip={{ duration: flipDurationMs }}>
+			<div
+				class="column-slot"
+				style={`--column-width: ${getColumnWidth(col.id)}px`}
+				animate:flip={{ duration: flipDurationMs }}
+			>
 				<Column
 					column={col}
+					width={getColumnWidth(col.id)}
+					defaultWidth={defaultColumnWidth}
 					hue={hueForColumn(col.name, i)}
 					onOpenCard={openCard}
 					onAddCard={onAddCard}
@@ -254,6 +317,7 @@
 					onDelete={onDeleteColumn}
 					onCardsReorder={onCardsReorder}
 					onConsider={onConsider}
+					onResize={onColumnResize}
 				/>
 			</div>
 		{/each}
