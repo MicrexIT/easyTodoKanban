@@ -27,6 +27,7 @@
 	let toast = $state('');
 	let isMobile = $state(false);
 	let columnWidths = $state<Record<number, number>>({});
+	let collapsedColumns = $state<Record<number, boolean>>({});
 
 	interface PendingCardMove {
 		cardId: number;
@@ -42,6 +43,7 @@
 	const minColumnWidth = 260;
 	const maxColumnWidth = 720;
 	const columnWidthStoragePrefix = 'easytodo:column-widths:';
+	const collapsedColumnStoragePrefix = 'easytodo:collapsed-columns:';
 
 	function isUnknownRecord(value: unknown): value is Record<string, unknown> {
 		return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -75,6 +77,39 @@
 		return columnWidths[columnId] ?? defaultColumnWidth;
 	}
 
+	function loadCollapsedColumns(projectId: number) {
+		try {
+			const stored = localStorage.getItem(`${collapsedColumnStoragePrefix}${projectId}`);
+			if (!stored) return {};
+			const parsed: unknown = JSON.parse(stored);
+			if (!Array.isArray(parsed)) return {};
+
+			const collapsed: Record<number, boolean> = {};
+			for (const id of parsed) {
+				if (typeof id === 'number' && Number.isInteger(id)) collapsed[id] = true;
+			}
+			return collapsed;
+		} catch {
+			return {};
+		}
+	}
+
+	function toggleColumn(columnId: number) {
+		const next = { ...collapsedColumns };
+		if (next[columnId]) delete next[columnId];
+		else next[columnId] = true;
+		collapsedColumns = next;
+
+		try {
+			localStorage.setItem(
+				`${collapsedColumnStoragePrefix}${project.id}`,
+				JSON.stringify(Object.keys(next).map(Number))
+			);
+		} catch {
+			// Collapsing still works when browser storage is unavailable.
+		}
+	}
+
 	function onColumnResize(columnId: number, width: number, persist: boolean) {
 		const nextWidths = { ...columnWidths, [columnId]: normalizeColumnWidth(width) };
 		columnWidths = nextWidths;
@@ -93,6 +128,7 @@
 	$effect(() => {
 		if (typeof window === 'undefined') return;
 		columnWidths = loadColumnWidths(project.id);
+		collapsedColumns = loadCollapsedColumns(project.id);
 	});
 
 	$effect(() => {
@@ -303,6 +339,7 @@
 		{#each localColumns as col, i (col.id)}
 			<div
 				class="column-slot"
+				class:collapsed={collapsedColumns[col.id]}
 				style={`--column-width: ${getColumnWidth(col.id)}px`}
 				animate:flip={{ duration: flipDurationMs }}
 			>
@@ -310,6 +347,7 @@
 					column={col}
 					width={getColumnWidth(col.id)}
 					defaultWidth={defaultColumnWidth}
+					collapsed={Boolean(collapsedColumns[col.id])}
 					hue={hueForColumn(col.name, i)}
 					onOpenCard={openCard}
 					onAddCard={onAddCard}
@@ -318,6 +356,7 @@
 					onCardsReorder={onCardsReorder}
 					onConsider={onConsider}
 					onResize={onColumnResize}
+					onToggleCollapse={toggleColumn}
 				/>
 			</div>
 		{/each}

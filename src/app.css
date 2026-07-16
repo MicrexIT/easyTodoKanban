@@ -176,6 +176,10 @@ select {
 	display: flex;
 	min-height: 0;
 	list-style: none;
+	transition: flex-basis 180ms ease;
+}
+.column-slot.collapsed {
+	flex-basis: 52px;
 }
 .column {
 	position: relative;
@@ -188,6 +192,9 @@ select {
 	max-height: calc(100vh - 90px);
 	display: flex;
 	flex-direction: column;
+}
+.column.collapsed {
+	min-width: 0;
 }
 .column-resizer {
 	position: absolute;
@@ -250,6 +257,14 @@ select {
 	gap: 8px;
 	padding: 12px 12px 8px;
 }
+.column.collapsed .column-head {
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px 7px;
+}
 .column-tag {
 	font-family: var(--mono);
 	font-size: 11px;
@@ -267,6 +282,21 @@ select {
 	font-family: var(--mono);
 	font-size: 11px;
 	color: var(--ink-3);
+}
+.column-collapsed-name {
+	font-family: var(--mono);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	writing-mode: vertical-rl;
+	transform: rotate(180deg);
+	color: var(--hue, var(--ink-2));
+	overflow: hidden;
+	white-space: nowrap;
+}
+.column.collapsed .column-count {
+	margin-top: auto;
 }
 .column-grip {
 	display: inline-flex;
@@ -300,6 +330,23 @@ select {
 .column-add:hover {
 	color: var(--accent);
 	background: var(--accent-soft);
+}
+.column-collapse {
+	border: 0;
+	background: none;
+	color: var(--ink-3);
+	cursor: pointer;
+	font: 18px/1 var(--mono);
+	padding: 1px 5px 3px;
+	border-radius: 6px;
+}
+.column-collapse:hover,
+.column-collapse:focus-visible {
+	color: var(--accent);
+	background: var(--accent-soft);
+}
+.column.collapsed .column-collapse {
+	padding: 2px 7px 4px;
 }
 .column-del {
 	border: 0;

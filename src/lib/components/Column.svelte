@@ -8,6 +8,7 @@
 		column: BoardColumn;
 		width: number;
 		defaultWidth: number;
+		collapsed: boolean;
 		hue: string;
 		onOpenCard: (card: CardType) => void;
 		onAddCard: (columnId: number) => void;
@@ -16,12 +17,14 @@
 		onCardsReorder: (columnId: number, cards: CardType[], movedCardId: number | null) => void;
 		onConsider: (columnId: number, cards: CardType[]) => void;
 		onResize: (columnId: number, width: number, persist: boolean) => void;
+		onToggleCollapse: (columnId: number) => void;
 	}
 
 	let {
 		column,
 		width,
 		defaultWidth,
+		collapsed,
 		hue,
 		onOpenCard,
 		onAddCard,
@@ -29,7 +32,8 @@
 		onDelete,
 		onCardsReorder,
 		onConsider,
-		onResize
+		onResize,
+		onToggleCollapse
 	}: Props = $props();
 
 	let items = $state<CardType[]>([]);
@@ -125,80 +129,103 @@
 	}
 </script>
 
-<section class="column" class:resizing data-hue={hue} aria-label={column.name}>
+<section class="column" class:resizing class:collapsed data-hue={hue} aria-label={column.name}>
 	<header class="column-head">
 		<span class="column-grip" use:dragHandle aria-label="Reorder {column.name}" title="Drag to reorder"
 			>⠿</span
 		>
-		{#if renaming}
-			<input
-				class="column-tag"
-				style="width: auto; min-width: 4ch;"
-				bind:value={nameDraft}
-				onblur={commitRename}
-				onkeydown={(e) => e.key === 'Enter' && commitRename()}
-			/>
+		{#if collapsed}
+			<button
+				type="button"
+				class="column-collapse"
+				aria-expanded="false"
+				aria-label="Expand {column.name} column"
+				title="Expand {column.name}"
+				onclick={() => onToggleCollapse(column.id)}
+			>›</button>
+			<span class="column-collapsed-name" title={column.name}>{column.name}</span>
+			<span class="column-count">{items.length}</span>
 		{:else}
-			<button type="button" class="column-tag" onclick={startRename} title="Rename column">
-				{column.name}
+			{#if renaming}
+				<input
+					class="column-tag"
+					style="width: auto; min-width: 4ch;"
+					bind:value={nameDraft}
+					onblur={commitRename}
+					onkeydown={(e) => e.key === 'Enter' && commitRename()}
+				/>
+			{:else}
+				<button type="button" class="column-tag" onclick={startRename} title="Rename column">
+					{column.name}
+				</button>
+			{/if}
+			<span class="column-count">{items.length}</span>
+			<button
+				type="button"
+				class="column-add"
+				title="Add card to {column.name}"
+				onclick={() => onAddCard(column.id)}
+			>
+				＋
+			</button>
+			<button
+				type="button"
+				class="column-collapse"
+				aria-expanded="true"
+				aria-label="Collapse {column.name} column"
+				title="Collapse {column.name}"
+				onclick={() => onToggleCollapse(column.id)}
+			>‹</button>
+			<button
+				type="button"
+				class="column-del"
+				title="Delete {column.name}"
+				aria-label="Delete column {column.name}"
+				onclick={() => onDelete(column.id)}
+			>
+				×
 			</button>
 		{/if}
-		<span class="column-count">{items.length}</span>
-		<button
-			type="button"
-			class="column-add"
-			title="Add card to {column.name}"
-			onclick={() => onAddCard(column.id)}
-		>
-			＋
-		</button>
-		<button
-			type="button"
-			class="column-del"
-			title="Delete {column.name}"
-			aria-label="Delete column {column.name}"
-			onclick={() => onDelete(column.id)}
-		>
-			×
-		</button>
 	</header>
 
-	<div
-		class="cards"
-		class:drag-over={dragOver}
-		class:is-empty={items.length === 0}
-		aria-label={items.length === 0 ? `Empty ${column.name} column. Drop a card here.` : undefined}
-		use:dndzone={{
-			items,
-			flipDurationMs,
-			type: 'card',
-			dropTargetStyle: {},
-			dropTargetClasses: ['drag-over']
-		}}
-		onconsider={handleConsider}
-		onfinalize={handleFinalize}
-	>
-		{#each items as card (card.id)}
-			<div class="card-wrap" animate:flip={{ duration: flipDurationMs }}>
-				<Card {card} onclick={onOpenCard} />
-			</div>
-		{/each}
-	</div>
-	<button
-		type="button"
-		class="column-resizer"
-		aria-label="Resize {column.name} column, currently {width} pixels"
-		title="Drag to resize · arrow keys adjust · Home resets"
-		onpointerdown={startResize}
-		onpointermove={moveResize}
-		onpointerup={finishResize}
-		onpointercancel={cancelResize}
-		onlostpointercapture={cancelResize}
-		onkeydown={resizeWithKeyboard}
-		ondblclick={(event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			onResize(column.id, defaultWidth, true);
-		}}
-	></button>
+	{#if !collapsed}
+		<div
+			class="cards"
+			class:drag-over={dragOver}
+			class:is-empty={items.length === 0}
+			aria-label={items.length === 0 ? `Empty ${column.name} column. Drop a card here.` : undefined}
+			use:dndzone={{
+				items,
+				flipDurationMs,
+				type: 'card',
+				dropTargetStyle: {},
+				dropTargetClasses: ['drag-over']
+			}}
+			onconsider={handleConsider}
+			onfinalize={handleFinalize}
+		>
+			{#each items as card (card.id)}
+				<div class="card-wrap" animate:flip={{ duration: flipDurationMs }}>
+					<Card {card} onclick={onOpenCard} />
+				</div>
+			{/each}
+		</div>
+		<button
+			type="button"
+			class="column-resizer"
+			aria-label="Resize {column.name} column, currently {width} pixels"
+			title="Drag to resize · arrow keys adjust · Home resets"
+			onpointerdown={startResize}
+			onpointermove={moveResize}
+			onpointerup={finishResize}
+			onpointercancel={cancelResize}
+			onlostpointercapture={cancelResize}
+			onkeydown={resizeWithKeyboard}
+			ondblclick={(event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				onResize(column.id, defaultWidth, true);
+			}}
+		></button>
+	{/if}
 </section>
