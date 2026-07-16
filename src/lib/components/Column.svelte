@@ -140,7 +140,7 @@
 				class="column-collapse"
 				aria-expanded="false"
 				aria-label="Expand {column.name} column"
-				title="Expand {column.name}"
+				title="Expand {column.name} · Shift+C toggles all"
 				onclick={() => onToggleCollapse(column.id)}
 			>›</button>
 			<span class="column-collapsed-name" title={column.name}>{column.name}</span>
@@ -173,7 +173,7 @@
 				class="column-collapse"
 				aria-expanded="true"
 				aria-label="Collapse {column.name} column"
-				title="Collapse {column.name}"
+				title="Collapse {column.name} · Shift+C toggles all"
 				onclick={() => onToggleCollapse(column.id)}
 			>‹</button>
 			<button

@@ -94,20 +94,38 @@
 		}
 	}
 
+	function persistCollapsedColumns(collapsed: Record<number, boolean>) {
+		try {
+			localStorage.setItem(
+				`${collapsedColumnStoragePrefix}${project.id}`,
+				JSON.stringify(Object.keys(collapsed).map(Number))
+			);
+		} catch {
+			// Collapsing still works when browser storage is unavailable.
+		}
+	}
+
 	function toggleColumn(columnId: number) {
 		const next = { ...collapsedColumns };
 		if (next[columnId]) delete next[columnId];
 		else next[columnId] = true;
 		collapsedColumns = next;
+		persistCollapsedColumns(next);
+	}
 
-		try {
-			localStorage.setItem(
-				`${collapsedColumnStoragePrefix}${project.id}`,
-				JSON.stringify(Object.keys(next).map(Number))
-			);
-		} catch {
-			// Collapsing still works when browser storage is unavailable.
+	function toggleAllColumns() {
+		if (localColumns.length === 0) return;
+		const allCollapsed = localColumns.every((column) => collapsedColumns[column.id]);
+		const next: Record<number, boolean> = {};
+		if (!allCollapsed) {
+			for (const column of localColumns) next[column.id] = true;
 		}
+
+		collapsedColumns = next;
+		persistCollapsedColumns(next);
+		showToast(
+			allCollapsed ? 'all columns expanded · ⇧C to collapse' : 'all columns collapsed · ⇧C to expand'
+		);
 	}
 
 	function onColumnResize(columnId: number, width: number, persist: boolean) {
@@ -306,13 +324,27 @@
 		}
 	}
 
-	// Keyboard: n = new card in first column
+	// Keyboard: n = new card in first column · Shift+C = toggle all columns
 	$effect(() => {
 		if (typeof window === 'undefined') return;
 		function onKey(e: KeyboardEvent) {
+			const t = e.target as HTMLElement;
+			if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return;
+
+			if (
+				e.shiftKey &&
+				e.key.toLowerCase() === 'c' &&
+				!e.metaKey &&
+				!e.ctrlKey &&
+				!e.altKey &&
+				!e.repeat
+			) {
+				e.preventDefault();
+				toggleAllColumns();
+				return;
+			}
+
 			if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-				const t = e.target as HTMLElement;
-				if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return;
 				if (localColumns[0]) {
 					e.preventDefault();
 					onAddCard(localColumns[0].id);
