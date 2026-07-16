@@ -3,6 +3,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
+	import SearchDialog from './SearchDialog.svelte';
 
 	interface Props {
 		projects: Project[];
@@ -175,6 +176,7 @@
 	</nav>
 	<div class="topbar-right">
 		<span class="hint">drag to move · pull edge to resize · click to edit</span>
+		<SearchDialog {projects} {currentSlug} />
 		<a href={archivedHref}>archived</a>
 	</div>
 </header>

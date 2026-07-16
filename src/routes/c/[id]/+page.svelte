@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { hueForColumn, relativeTime, renderMarkdown } from '$lib/markdown';
 	import AttachmentGallery from '$lib/components/AttachmentGallery.svelte';
+	import SearchDialog from '$lib/components/SearchDialog.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -36,6 +37,7 @@
 		<span>#{data.card.id}</span>
 	</nav>
 	<div class="topbar-right">
+		<SearchDialog projects={data.projects} currentSlug={data.project.slug} />
 		<a href="/p/{data.project.slug}">← board</a>
 	</div>
 </header>

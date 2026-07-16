@@ -552,6 +552,54 @@ export async function listArchived(
 	return results;
 }
 
+export async function searchCards(
+	db: D1Database,
+	query: string,
+	projectRef?: string | number,
+	limit = 40
+): Promise<CardWithContext[]> {
+	const term = query.trim();
+	if (!term) return [];
+
+	const boundedLimit = Math.min(100, Math.max(1, Math.floor(limit)));
+	const cardId = /^#?\d+$/.test(term) ? Number(term.replace(/^#/, '')) : null;
+	const project = projectRef == null ? null : await resolveProject(db, projectRef);
+	const projectClause = project ? 'AND projects.id = ?' : '';
+	const statement = db.prepare(
+		`SELECT cards.*, columns.name AS column_name, columns.project_id,
+              projects.name AS project_name, projects.slug AS project_slug
+       FROM cards
+       INNER JOIN columns ON columns.id = cards.column_id
+       INNER JOIN projects ON projects.id = columns.project_id
+       WHERE cards.archived_at IS NULL
+         ${projectClause}
+         AND (
+           instr(lower(cards.title), lower(?)) > 0
+           OR instr(lower(cards.body_md), lower(?)) > 0
+           OR (? IS NOT NULL AND cards.id = ?)
+         )
+       ORDER BY
+         CASE
+           WHEN (? IS NOT NULL AND cards.id = ?) THEN 0
+           WHEN lower(cards.title) = lower(?) THEN 1
+           WHEN instr(lower(cards.title), lower(?)) = 1 THEN 2
+           WHEN instr(lower(cards.title), lower(?)) > 0 THEN 3
+           ELSE 4
+         END,
+         projects.position ASC,
+         columns.position ASC,
+         cards.position ASC,
+         cards.id ASC
+       LIMIT ?`
+	);
+	const bindings: unknown[] = [];
+	if (project) bindings.push(project.id);
+	bindings.push(term, term, cardId, cardId, cardId, cardId, term, term, term, boundedLimit);
+
+	const { results } = await statement.bind(...bindings).all<CardWithContext>();
+	return results;
+}
+
 export async function createColumn(
 	db: D1Database,
 	projectRef: string | number,
