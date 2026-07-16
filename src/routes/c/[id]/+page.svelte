@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { hueForColumn, relativeTime, renderMarkdown } from '$lib/markdown';
 	import AttachmentGallery from '$lib/components/AttachmentGallery.svelte';
 	import SearchDialog from '$lib/components/SearchDialog.svelte';
@@ -21,6 +22,33 @@
 	const hue = $derived(
 		hueForColumn(data.card.column_name, data.columnIndex >= 0 ? data.columnIndex : 0)
 	);
+	const boardHref = $derived(`/p/${data.project.slug}`);
+
+	function resetDraft() {
+		title = data.card.title;
+		body = data.card.body_md;
+		editing = false;
+	}
+
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+
+		function onEscape(event: KeyboardEvent) {
+			if (event.key !== 'Escape' || event.metaKey || event.ctrlKey || event.altKey) return;
+			// The topmost dialog owns Escape, so search closes without leaving the card.
+			if (document.querySelector('dialog[open]')) return;
+
+			event.preventDefault();
+			if (editing) {
+				resetDraft();
+				return;
+			}
+			void goto(boardHref);
+		}
+
+		window.addEventListener('keydown', onEscape);
+		return () => window.removeEventListener('keydown', onEscape);
+	});
 </script>
 
 <svelte:head>
@@ -29,8 +57,15 @@
 
 <header class="topbar">
 	<a class="logotype" href="/"><span class="tick">▤</span> easytodo</a>
+	<a
+		class="item-back"
+		href={boardHref}
+		aria-label="Back to {data.project.name} board"
+		aria-keyshortcuts="Escape"
+		title="Back to {data.project.name} board · Esc"
+	>←</a>
 	<nav class="crumbs" aria-label="Breadcrumb">
-		<a href="/p/{data.project.slug}">{data.project.slug}</a>
+		<a href={boardHref}>{data.project.slug}</a>
 		<span>/</span>
 		<span>{data.card.column_name.toLowerCase()}</span>
 		<span>·</span>
@@ -38,7 +73,6 @@
 	</nav>
 	<div class="topbar-right">
 		<SearchDialog projects={data.projects} currentSlug={data.project.slug} />
-		<a href="/p/{data.project.slug}">← board</a>
 	</div>
 </header>
 
@@ -79,7 +113,7 @@
 						<AttachmentGallery cardId={data.card.id} attachments={data.card.attachments} />
 					</div>
 					<div class="sheet-foot">
-						<button type="button" class="btn" onclick={() => (editing = false)}>cancel</button>
+						<button type="button" class="btn" onclick={resetDraft}>cancel</button>
 						<button type="submit" class="btn btn-primary">save</button>
 					</div>
 				</form>

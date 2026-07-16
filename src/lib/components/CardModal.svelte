@@ -42,9 +42,15 @@
 	function onDialogClose() {
 		onClose();
 	}
+
+	function onDialogCancel(event: Event) {
+		// Make Escape follow the same close path as the visible close button.
+		event.preventDefault();
+		dialogEl?.close();
+	}
 </script>
 
-<dialog class="card-modal" bind:this={dialogEl} onclose={onDialogClose}>
+<dialog class="card-modal" bind:this={dialogEl} onclose={onDialogClose} oncancel={onDialogCancel}>
 	{#if card && cardId != null}
 		<header class="modal-head">
 			<span class="path"
