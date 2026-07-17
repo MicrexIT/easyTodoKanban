@@ -126,7 +126,7 @@
 </script>
 
 <header class="topbar">
-	<a class="logotype" href="/"><span class="tick">▤</span> easytodo</a>
+	<a class="logotype" href="/"><span class="tick" aria-hidden="true">🍰</span>easytodo</a>
 	<nav class="projects" aria-label="Projects">
 		{#each projects as p (p.id)}
 			<a

@@ -56,7 +56,7 @@
 </svelte:head>
 
 <header class="topbar">
-	<a class="logotype" href="/"><span class="tick">▤</span> easytodo</a>
+	<a class="logotype" href="/"><span class="tick" aria-hidden="true">🍰</span>easytodo</a>
 	<a
 		class="item-back"
 		href={boardHref}
