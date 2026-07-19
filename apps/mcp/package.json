@@ -10,6 +10,7 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
+		"@cloudflare/workers-oauth-provider": "^0.8.2",
 		"@easytodo/db": "workspace:*",
 		"@modelcontextprotocol/sdk": "^1.17.0",
 		"zod": "^3.25.76"

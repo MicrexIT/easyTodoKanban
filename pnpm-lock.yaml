@@ -51,6 +51,9 @@ importers:
 
   apps/mcp:
     dependencies:
+      '@cloudflare/workers-oauth-provider':
+        specifier: ^0.8.2
+        version: 0.8.2
       '@easytodo/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -127,6 +130,9 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@cloudflare/workers-oauth-provider@0.8.2':
+    resolution: {integrity: sha512-Pho5qWDl4qj1STI5QYMQfPmJBBkxyrFpXyDl9BrtYOfWHxThabEzdi9p3ezS2cUkbjA0E6L5ki/kq2pcbRUtlg==}
 
   '@cloudflare/workers-types@4.20260702.1':
     resolution: {integrity: sha512-mOhf5TUEB1m2vPrxtqoIGfz0fUC9xyxRDx5gWHy5s+OCo6dcV+g7wI1R7gYCMFohhqF/2y2xeKVwMwCJjfn/WA==}
@@ -1560,6 +1566,8 @@ snapshots:
 
   '@cloudflare/workerd-windows-64@1.20260708.1':
     optional: true
+
+  '@cloudflare/workers-oauth-provider@0.8.2': {}
 
   '@cloudflare/workers-types@4.20260702.1': {}
 

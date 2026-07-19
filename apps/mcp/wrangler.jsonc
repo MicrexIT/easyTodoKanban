@@ -1,6 +1,8 @@
 /**
  * easyTodoKanban MCP Worker — Streamable HTTP at /mcp
- * Same D1 database as the web app. Auth: Bearer MCP_TOKEN secret.
+ * Same D1 database as the web app.
+ * Auth: static Bearer MCP_TOKEN, or OAuth 2.1 (workers-oauth-provider) for
+ * clients that can't send custom headers (claude.ai / Claude Desktop connectors).
  */
 {
 	"$schema": "../../node_modules/wrangler/config-schema.json",
@@ -20,6 +22,12 @@
 		{
 			"binding": "MEDIA",
 			"bucket_name": "easytodo-media"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "OAUTH_KV",
+			"id": "d825b940137f48669d0cc9a2f988224e"
 		}
 	]
 }
