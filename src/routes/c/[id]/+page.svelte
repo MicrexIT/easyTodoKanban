@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { hueForColumn, relativeTime, renderMarkdown } from '$lib/markdown';
+	import { buildGoogleCalendarLink } from '$lib/calendarLink';
 	import AttachmentGallery from '$lib/components/AttachmentGallery.svelte';
 	import DeadlineFields from '$lib/components/DeadlineFields.svelte';
 	import SearchDialog from '$lib/components/SearchDialog.svelte';
@@ -26,6 +28,16 @@
 	);
 	const boardHref = $derived(`/p/${data.project.slug}`);
 	const deadline = $derived(deadlinePresentation(data.card.due_at));
+	const calendarHref = $derived(
+		data.card.due_at
+			? buildGoogleCalendarLink({
+					cardId: data.card.id,
+					title: data.card.title,
+					dueAt: data.card.due_at,
+					origin: page.url.origin
+				})
+			: null
+	);
 
 	function resetDraft() {
 		title = data.card.title;
@@ -130,6 +142,11 @@
 					{#if deadline}
 						<span class="due-badge" class:overdue={deadline.overdue} title={deadline.title}
 							>due {deadline.label}</span
+						>
+					{/if}
+					{#if calendarHref}
+						<a class="calendar-link" href={calendarHref} target="_blank" rel="noreferrer"
+							>Add to Google Calendar ⤴</a
 						>
 					{/if}
 				</div>

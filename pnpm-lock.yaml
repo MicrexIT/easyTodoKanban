@@ -45,6 +45,9 @@ importers:
       vite:
         specifier: ^7.1.0
         version: 7.3.6(lightningcss@1.32.0)
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(lightningcss@1.32.0)
       wrangler:
         specifier: ^4.24.0
         version: 4.110.0(@cloudflare/workers-types@4.20260702.1)

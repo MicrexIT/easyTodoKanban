@@ -2,6 +2,8 @@
 	import type { CardWithAttachments as CardType, Project } from '@easytodo/db';
 	import { renderMarkdown, relativeTime } from '$lib/markdown';
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
+	import { buildGoogleCalendarLink } from '$lib/calendarLink';
 	import AttachmentGallery from './AttachmentGallery.svelte';
 	import DeadlineFields from './DeadlineFields.svelte';
 
@@ -34,6 +36,16 @@
 	});
 
 	const previewHtml = $derived(renderMarkdown(body));
+	const calendarHref = $derived(
+		card?.due_at
+			? buildGoogleCalendarLink({
+					cardId: card.id,
+					title: card.title,
+					dueAt: card.due_at,
+					origin: page.url.origin
+				})
+			: null
+	);
 	const meta = $derived(
 		card
 			? `created ${card.created_at.slice(0, 10)} · updated ${relativeTime(card.updated_at)}`
@@ -77,6 +89,11 @@
 			<div class="modal-body">
 				<input class="title-input" name="title" bind:value={title} required />
 				<DeadlineFields dueAt={card.due_at} idPrefix={`modal-card-${cardId}`} />
+				{#if calendarHref}
+					<a class="calendar-link" href={calendarHref} target="_blank" rel="noreferrer"
+						>Add to Google Calendar ⤴</a
+					>
+				{/if}
 				<AttachmentGallery cardId={cardId} attachments={card.attachments} compact />
 				<div class="editor-tabs" role="tablist">
 					<button
