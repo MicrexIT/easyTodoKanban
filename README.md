@@ -47,6 +47,8 @@ pnpm db:migrate:remote
 openssl rand -hex 32 | pnpm exec wrangler secret put MCP_TOKEN --config apps/mcp/wrangler.jsonc
 ```
 
+Google Calendar synchronization is optional. Follow the one-time [service-account setup guide](docs/google-calendar-setup.md) to configure the three calendar secrets on both Workers. Without those secrets, deadlines and Phase 6 template links continue to work normally and the agenda strip reports that Calendar is not configured.
+
 For **local MCP** auth, set `MCP_TOKEN` in `apps/mcp/.dev.vars`:
 
 ```
@@ -89,6 +91,12 @@ pictures so they return when the card is restored.
 Cloudflare Images is not required for this first version. R2 plus client-side compression keeps the
 storage model simple and inexpensive; Images transformations can be layered on later if the app
 needs multiple generated sizes or format negotiation at larger scale.
+
+## Google Calendar
+
+Cards with deadlines sync one way to a shared Google Calendar. Creating or changing a deadline creates or updates its event; changing the title updates the event summary; clearing the deadline, archiving the card, or permanently deleting it removes the event. Calendar errors are logged and never roll back the card mutation because the kanban is the source of truth.
+
+The collapsible agenda strip under the board tabs shows a five-minute-cached snapshot of any selected day and links each event to Google Calendar. See [docs/google-calendar-setup.md](docs/google-calendar-setup.md) for setup and troubleshooting.
 
 ## Deploy
 

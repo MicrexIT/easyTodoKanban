@@ -160,6 +160,95 @@ select {
 	color: var(--ink);
 }
 
+/* ---- agenda ----------------------------------------------------- */
+.agenda-strip {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	min-height: 30px;
+	padding: 4px 20px;
+	border-bottom: 1px solid var(--line);
+	background: color-mix(in srgb, var(--surface) 88%, var(--card));
+	font: 11px var(--mono);
+	color: var(--ink-3);
+}
+.agenda-controls,
+.agenda-controls label,
+.agenda-events,
+.agenda-event {
+	display: flex;
+	align-items: center;
+}
+.agenda-controls {
+	gap: 10px;
+	flex: 0 0 auto;
+}
+.agenda-controls label {
+	gap: 6px;
+}
+.agenda-toggle,
+.agenda-refresh {
+	border: 0;
+	padding: 3px 4px;
+	background: transparent;
+	color: var(--ink-2);
+	font: inherit;
+	cursor: pointer;
+}
+.agenda-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-weight: 600;
+}
+.agenda-toggle:hover,
+.agenda-refresh:hover {
+	color: var(--accent);
+}
+.agenda-controls input {
+	border: 1px solid var(--line);
+	border-radius: 5px;
+	padding: 2px 5px;
+	background: var(--card);
+	color: var(--ink-2);
+	font: inherit;
+}
+.agenda-events {
+	min-width: 0;
+	gap: 8px;
+	overflow-x: auto;
+	padding: 2px 0;
+}
+.agenda-event {
+	flex: 0 0 auto;
+	gap: 6px;
+	max-width: 260px;
+	padding: 3px 8px;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	background: var(--card);
+	color: var(--ink-2);
+	text-decoration: none;
+}
+.agenda-event:hover {
+	border-color: var(--accent);
+	color: var(--ink);
+}
+.agenda-event time {
+	color: var(--ink-3);
+}
+.agenda-event span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.agenda-status {
+	padding: 3px 0;
+}
+.agenda-error {
+	color: var(--danger);
+}
+
 /* ---- search ----------------------------------------------------- */
 .search-trigger {
 	display: inline-flex;
@@ -1629,6 +1718,18 @@ select.move {
 
 /* ---- mobile ------------------------------------------------------ */
 @media (max-width: 640px) {
+	.agenda-strip {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 5px;
+		padding: 4px 12px 7px;
+	}
+	.agenda-strip:not(.expanded) {
+		padding-bottom: 4px;
+	}
+	.agenda-events {
+		width: 100%;
+	}
 	.board {
 		scroll-snap-type: x mandatory;
 		gap: 12px;

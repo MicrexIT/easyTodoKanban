@@ -10,6 +10,7 @@ import {
 	moveCard,
 	updateCard
 } from '@easytodo/db';
+import { scheduleCardCalendarSync } from '$lib/server/calendar';
 
 export const load: PageServerLoad = async (event) => {
 	const db = getDb(event);
@@ -42,11 +43,12 @@ export const actions: Actions = {
 		const cardId = Number(event.params.id);
 		const rawDueAt = data.get('due_at');
 		try {
-			await updateCard(db, cardId, {
+			const card = await updateCard(db, cardId, {
 				title: String(data.get('title') ?? ''),
 				body_md: String(data.get('body_md') ?? ''),
 				due_at: rawDueAt === null ? undefined : String(rawDueAt) || null
 			});
+			scheduleCardCalendarSync(event, db, card);
 			return { ok: true };
 		} catch (e) {
 			return fail(400, { message: e instanceof Error ? e.message : 'update failed' });
@@ -68,6 +70,7 @@ export const actions: Actions = {
 		const cardId = Number(event.params.id);
 		try {
 			const card = await archiveCard(db, cardId);
+			scheduleCardCalendarSync(event, db, card);
 			const full = await getCard(db, card.id);
 			throw redirect(303, `/p/${full.project_slug}`);
 		} catch (e) {

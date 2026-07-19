@@ -4,19 +4,23 @@ import { getDb } from '$lib/server/db';
 import {
 	DbError,
 	deleteProject,
+	listProjectGoogleEventIds,
 	listProjectAttachmentKeys,
 	listProjects
 } from '@easytodo/db';
 import { deleteMediaObjects, getMediaBucket } from '$lib/server/media';
+import { scheduleCalendarEventDeletion } from '$lib/server/calendar';
 
 export const POST: RequestHandler = async (event) => {
 	const db = getDb(event);
 	const body = (await event.request.json()) as { projectId?: unknown };
 	const projectId = Number(body.projectId);
 	try {
+		const eventIds = await listProjectGoogleEventIds(db, projectId);
 		const keys = await listProjectAttachmentKeys(db, projectId);
 		const bucket = getMediaBucket(event, keys.length > 0);
 		await deleteProject(db, projectId);
+		scheduleCalendarEventDeletion(event, eventIds);
 		await deleteMediaObjects(bucket, keys);
 		const remaining = await listProjects(db);
 		return json({ ok: true, nextSlug: remaining[0]?.slug ?? null });

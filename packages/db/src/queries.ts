@@ -460,6 +460,69 @@ export async function updateCard(
 	return card;
 }
 
+/**
+ * Store a Google event id only if the card still matches the snapshot that was
+ * synced. This prevents a slow calendar request from claiming a newer edit.
+ */
+export async function replaceCardGoogleEventId(
+	db: D1Database,
+	cardId: number,
+	eventId: string,
+	expected: { previousEventId: string | null; dueAt: string; title: string }
+): Promise<boolean> {
+	const result = await db
+		.prepare(
+			`UPDATE cards SET gcal_event_id = ?
+       WHERE id = ? AND gcal_event_id IS ? AND due_at = ? AND title = ?
+         AND archived_at IS NULL`
+		)
+		.bind(
+			eventId,
+			cardId,
+			expected.previousEventId,
+			expected.dueAt,
+			expected.title
+		)
+		.run();
+	return result.meta.changes > 0;
+}
+
+/** Clear an event id only while it is still the id attached to this card. */
+export async function clearCardGoogleEventId(
+	db: D1Database,
+	cardId: number,
+	eventId: string,
+	requireInactive = false
+): Promise<boolean> {
+	const inactiveClause = requireInactive
+		? 'AND (archived_at IS NOT NULL OR due_at IS NULL)'
+		: '';
+	const result = await db
+		.prepare(
+			`UPDATE cards SET gcal_event_id = NULL
+       WHERE id = ? AND gcal_event_id = ? ${inactiveClause}`
+		)
+		.bind(cardId, eventId)
+		.run();
+	return result.meta.changes > 0;
+}
+
+export async function listProjectGoogleEventIds(
+	db: D1Database,
+	projectRef: string | number
+): Promise<string[]> {
+	const project = await resolveProject(db, projectRef);
+	const { results } = await db
+		.prepare(
+			`SELECT DISTINCT cards.gcal_event_id FROM cards
+       INNER JOIN columns ON columns.id = cards.column_id
+       WHERE columns.project_id = ? AND cards.gcal_event_id IS NOT NULL`
+		)
+		.bind(project.id)
+		.all<{ gcal_event_id: string }>();
+	return results.map((row) => row.gcal_event_id);
+}
+
 export async function moveCard(
 	db: D1Database,
 	cardId: number,

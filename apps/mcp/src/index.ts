@@ -5,6 +5,9 @@ import { createKanbanServer } from './tools';
 
 type WorkerEnv = Env & {
 	MCP_TOKEN: string;
+	GOOGLE_SA_EMAIL?: string;
+	GOOGLE_SA_KEY?: string;
+	GOOGLE_CALENDAR_ID?: string;
 	OAUTH_PROVIDER: OAuthHelpers;
 };
 
@@ -32,8 +35,24 @@ function checkStaticToken(request: Request, env: WorkerEnv): boolean {
 // No auth here: requests arrive either via the static-token fast path below
 // or through OAuthProvider, which has already validated an access token.
 const mcpHandler = {
-	async fetch(request: Request, env: WorkerEnv): Promise<Response> {
-		const server = createKanbanServer(env.DB, env.MEDIA);
+	async fetch(request: Request, env: WorkerEnv, ctx?: ExecutionContext): Promise<Response> {
+		const calendar =
+			env.GOOGLE_SA_EMAIL && env.GOOGLE_SA_KEY && env.GOOGLE_CALENDAR_ID
+				? {
+						credentials: {
+							serviceAccountEmail: env.GOOGLE_SA_EMAIL,
+							privateKey: env.GOOGLE_SA_KEY
+						},
+						calendarId: env.GOOGLE_CALENDAR_ID,
+						origin: env.WEB_ORIGIN
+					}
+				: undefined;
+		const server = createKanbanServer({
+			db: env.DB,
+			media: env.MEDIA,
+			calendar,
+			waitUntil: ctx ? (promise) => ctx.waitUntil(promise) : undefined
+		});
 		const transport = new WebStandardStreamableHTTPServerTransport({
 			// no sessionIdGenerator => stateless
 			enableJsonResponse: true
@@ -125,7 +144,7 @@ export default {
 		// that send the static secret directly. Everything else — including
 		// /mcp with an OAuth access token — goes through the provider.
 		if (url.pathname === '/mcp' && checkStaticToken(request, env)) {
-			return mcpHandler.fetch(request, env);
+			return mcpHandler.fetch(request, env, ctx);
 		}
 
 		return provider.fetch(request, env, ctx);

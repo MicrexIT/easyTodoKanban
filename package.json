@@ -10,7 +10,7 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test": "vitest run src && pnpm --filter @easytodo/db test",
+		"test": "vitest run src && pnpm --filter @easytodo/db test && pnpm --filter @easytodo/gcal test",
 		"db:migrate:local": "wrangler d1 migrations apply easy-todo-kanban --local",
 		"db:migrate:remote": "wrangler d1 migrations apply easy-todo-kanban --remote",
 		"dev:mcp": "pnpm --filter @easytodo/mcp dev",
@@ -19,6 +19,7 @@
 	},
 	"dependencies": {
 		"@easytodo/db": "workspace:*",
+		"@easytodo/gcal": "workspace:*",
 		"dompurify": "^3.2.6",
 		"marked": "^16.1.1",
 		"svelte-dnd-action": "^0.9.65"

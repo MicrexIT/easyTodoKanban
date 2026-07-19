@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import Board from '$lib/components/Board.svelte';
 	import Topbar from '$lib/components/Topbar.svelte';
+	import AgendaStrip from '$lib/components/AgendaStrip.svelte';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -19,5 +20,6 @@
 
 <div style="display:flex;flex-direction:column;height:100%;min-height:100vh;">
 	<Topbar projects={data.projects} currentSlug={data.board.project.slug} />
+	<AgendaStrip />
 	<Board project={data.board.project} columns={data.board.columns} />
 </div>

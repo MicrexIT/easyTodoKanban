@@ -67,6 +67,7 @@ dynamic and user-named. Hues have separate light/dark values — port both sets.
 | Mockup selector | Component |
 |---|---|
 | `.topbar`, `.projects`, `.project-tab` | `Topbar.svelte` — logotype, project tabs, archived link |
+| `.agenda-strip` | `AgendaStrip.svelte` — collapsible day snapshot, mono controls and event links |
 | `.board` | `Board.svelte` — horizontal scroll, snap on mobile |
 | `.column`, `.column-head` | `Column.svelte` — rail, mono header, count, add-card |
 | `.card`, `.card-body`, `.card-meta` | `Card.svelte` — title, rendered md preview, mono meta row |

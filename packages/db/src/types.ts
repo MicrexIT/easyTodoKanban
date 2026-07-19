@@ -21,6 +21,7 @@ export type Card = {
 	body_md: string;
 	position: number;
 	due_at: string | null;
+	gcal_event_id: string | null;
 	archived_at: string | null;
 	created_at: string;
 	updated_at: string;

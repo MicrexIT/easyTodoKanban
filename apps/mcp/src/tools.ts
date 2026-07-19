@@ -19,6 +19,7 @@ import {
 	renameColumn,
 	updateCard
 } from '@easytodo/db';
+import { syncCardEvent, type CalendarSyncConfig } from '@easytodo/gcal';
 import {
 	bytesToBase64,
 	MAX_BASE64_INPUT_CHARS,
@@ -73,11 +74,34 @@ const dueAtSchema = z
 		}
 	);
 
-export function createKanbanServer(db: D1Database, media: R2Bucket) {
+type KanbanServerOptions = {
+	db: D1Database;
+	media: R2Bucket;
+	calendar?: CalendarSyncConfig;
+	waitUntil?: (promise: Promise<unknown>) => void;
+};
+
+export function createKanbanServer({ db, media, calendar, waitUntil }: KanbanServerOptions) {
 	const server = new McpServer({
 		name: 'easytodo-kanban',
 		version: '1.0.0'
 	});
+
+	function scheduleCalendarSync(card: Awaited<ReturnType<typeof createCard>>): void {
+		if (!calendar) return;
+		const guarded = syncCardEvent(db, card, calendar).catch((cause) => {
+			console.error(
+				JSON.stringify({
+					level: 'error',
+					component: 'google-calendar',
+					operation: `sync-card-${card.id}`,
+					message: cause instanceof Error ? cause.message : String(cause)
+				})
+			);
+		});
+		if (waitUntil) waitUntil(guarded);
+		else void guarded;
+	}
 
 	server.tool('list_projects', 'List all kanban projects (id, name, slug)', {}, async () => {
 		try {
@@ -156,6 +180,7 @@ export function createKanbanServer(db: D1Database, media: R2Bucket) {
 		async (args) => {
 			try {
 				const card = await createCard(db, args);
+				scheduleCalendarSync(card);
 				return textResult(card);
 			} catch (e) {
 				return errorResult(e instanceof DbError ? e.message : String(e));
@@ -177,6 +202,7 @@ export function createKanbanServer(db: D1Database, media: R2Bucket) {
 		async ({ card_id, title, body_md, due_at }) => {
 			try {
 				const card = await updateCard(db, card_id, { title, body_md, due_at });
+				scheduleCalendarSync(card);
 				return textResult(card);
 			} catch (e) {
 				return errorResult(e instanceof DbError ? e.message : String(e));
@@ -212,6 +238,7 @@ export function createKanbanServer(db: D1Database, media: R2Bucket) {
 		async ({ card_id }) => {
 			try {
 				const card = await archiveCard(db, card_id);
+				scheduleCalendarSync(card);
 				return textResult(card);
 			} catch (e) {
 				return errorResult(e instanceof DbError ? e.message : String(e));
