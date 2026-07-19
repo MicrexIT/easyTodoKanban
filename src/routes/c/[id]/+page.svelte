@@ -3,7 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { hueForColumn, relativeTime, renderMarkdown } from '$lib/markdown';
 	import AttachmentGallery from '$lib/components/AttachmentGallery.svelte';
+	import DeadlineFields from '$lib/components/DeadlineFields.svelte';
 	import SearchDialog from '$lib/components/SearchDialog.svelte';
+	import { deadlinePresentation } from '$lib/deadlines';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -23,6 +25,7 @@
 		hueForColumn(data.card.column_name, data.columnIndex >= 0 ? data.columnIndex : 0)
 	);
 	const boardHref = $derived(`/p/${data.project.slug}`);
+	const deadline = $derived(deadlinePresentation(data.card.due_at));
 
 	function resetDraft() {
 		title = data.card.title;
@@ -109,6 +112,7 @@
 				}}>
 					<div class="item-editor">
 						<input class="title-input" name="title" bind:value={title} required />
+						<DeadlineFields dueAt={data.card.due_at} idPrefix={`item-card-${data.card.id}`} />
 						<textarea name="body_md" bind:value={body} spellcheck="false"></textarea>
 						<AttachmentGallery cardId={data.card.id} attachments={data.card.attachments} />
 					</div>
@@ -123,6 +127,11 @@
 					created {data.card.created_at.slice(0, 10)} · updated {relativeTime(
 						data.card.updated_at
 					)}
+					{#if deadline}
+						<span class="due-badge" class:overdue={deadline.overdue} title={deadline.title}
+							>due {deadline.label}</span
+						>
+					{/if}
 				</div>
 				<AttachmentGallery cardId={data.card.id} attachments={data.card.attachments} />
 				<div class="item-body">

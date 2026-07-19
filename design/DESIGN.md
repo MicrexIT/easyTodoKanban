@@ -36,6 +36,7 @@ global stylesheet. Summary:
 | `--line` | `#D8DDE3` | `#2B333C` | hairline borders |
 | `--accent` | `#2F6E5E` | `#4FA98F` | verdigris — **interaction only**: focus, drag states, primary button, links-on-hover. Never decoration. |
 | `--danger` | `#A34B3D` | `#C46A5B` | archive/delete affordances |
+| `--overdue` / `--overdue-soft` | `#A34B3D` / `#A34B3D18` | `#DF7868` / `#DF786824` | overdue deadline badge text and wash |
 | `--hue-todo/doing/done` | slate / amber `#C07A21` / moss `#4E8A5F` | same | per-column rail + card id |
 
 Type: `--sans` (system stack) and `--mono` (ui-monospace stack). No webfonts —

@@ -12,6 +12,7 @@ export const POST: RequestHandler = async (event) => {
 			column: body.columnId ?? body.column,
 			title: body.title,
 			body_md: body.body_md,
+			due_at: body.due_at,
 			top: body.top
 		});
 		return json(card);

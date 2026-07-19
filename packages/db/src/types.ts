@@ -20,6 +20,7 @@ export type Card = {
 	title: string;
 	body_md: string;
 	position: number;
+	due_at: string | null;
 	archived_at: string | null;
 	created_at: string;
 	updated_at: string;

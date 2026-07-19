@@ -12,6 +12,48 @@ import type {
 } from './types.js';
 import { DbError } from './types.js';
 
+const ALL_DAY_DUE_AT = /^(\d{4})-(\d{2})-(\d{2})$/;
+const TIMED_DUE_AT =
+	/^(\d{4})-(\d{2})-(\d{2})T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?Z$/;
+
+function isRealCalendarDate(year: number, month: number, day: number): boolean {
+	const date = new Date(0);
+	date.setUTCHours(0, 0, 0, 0);
+	date.setUTCFullYear(year, month - 1, day);
+	return (
+		date.getUTCFullYear() === year &&
+		date.getUTCMonth() === month - 1 &&
+		date.getUTCDate() === day
+	);
+}
+
+/** Validate and canonicalize the nullable deadline stored on a card. */
+export function normalizeDueAt(value: string | null): string | null {
+	if (value === null) return null;
+
+	const allDay = ALL_DAY_DUE_AT.exec(value);
+	if (allDay) {
+		const [, year, month, day] = allDay;
+		if (isRealCalendarDate(Number(year), Number(month), Number(day))) return value;
+	}
+
+	const timed = TIMED_DUE_AT.exec(value);
+	if (timed) {
+		const [, year, month, day] = timed;
+		const timestamp = Date.parse(value);
+		if (
+			isRealCalendarDate(Number(year), Number(month), Number(day)) &&
+			Number.isFinite(timestamp)
+		) {
+			return new Date(timestamp).toISOString();
+		}
+	}
+
+	throw new DbError(
+		'due_at must be a real date (YYYY-MM-DD) or an ISO 8601 UTC datetime ending in Z'
+	);
+}
+
 function slugify(name: string): string {
 	const base = name
 		.trim()
@@ -368,6 +410,7 @@ export async function createCard(
 		column: string | number;
 		title: string;
 		body_md?: string;
+		due_at?: string | null;
 		top?: boolean;
 	}
 ): Promise<Card> {
@@ -375,12 +418,13 @@ export async function createCard(
 	if (!title) throw new DbError('title is required');
 	const col = await resolveColumn(db, opts.project, opts.column);
 	const position = await insertCardPosition(db, col.id, null, opts.top === true);
+	const dueAt = opts.due_at === undefined ? null : normalizeDueAt(opts.due_at);
 	const result = await db
 		.prepare(
-			`INSERT INTO cards (column_id, title, body_md, position)
-       VALUES (?, ?, ?, ?)`
+			`INSERT INTO cards (column_id, title, body_md, position, due_at)
+		 VALUES (?, ?, ?, ?, ?)`
 		)
-		.bind(col.id, title, opts.body_md ?? '', position)
+		.bind(col.id, title, opts.body_md ?? '', position, dueAt)
 		.run();
 	const id = result.meta.last_row_id;
 	const card = await db.prepare('SELECT * FROM cards WHERE id = ?').bind(id).first<Card>();
@@ -391,7 +435,7 @@ export async function createCard(
 export async function updateCard(
 	db: D1Database,
 	cardId: number,
-	patch: { title?: string; body_md?: string }
+	patch: { title?: string; body_md?: string; due_at?: string | null }
 ): Promise<Card> {
 	const existing = await db
 		.prepare('SELECT * FROM cards WHERE id = ?')
@@ -402,12 +446,13 @@ export async function updateCard(
 	const title = patch.title !== undefined ? patch.title.trim() : existing.title;
 	if (!title) throw new DbError('title is required');
 	const body_md = patch.body_md !== undefined ? patch.body_md : existing.body_md;
+	const due_at = patch.due_at !== undefined ? normalizeDueAt(patch.due_at) : existing.due_at;
 
 	await db
 		.prepare(
-			`UPDATE cards SET title = ?, body_md = ?, updated_at = datetime('now') WHERE id = ?`
+			`UPDATE cards SET title = ?, body_md = ?, due_at = ?, updated_at = datetime('now') WHERE id = ?`
 		)
-		.bind(title, body_md, cardId)
+		.bind(title, body_md, due_at, cardId)
 		.run();
 
 	const card = await db.prepare('SELECT * FROM cards WHERE id = ?').bind(cardId).first<Card>();

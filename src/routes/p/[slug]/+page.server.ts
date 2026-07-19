@@ -29,8 +29,10 @@ export const actions: Actions = {
 		const cardId = Number(data.get('cardId'));
 		const title = String(data.get('title') ?? '');
 		const body_md = String(data.get('body_md') ?? '');
+		const rawDueAt = data.get('due_at');
+		const due_at = rawDueAt === null ? undefined : String(rawDueAt) || null;
 		try {
-			await updateCard(db, cardId, { title, body_md });
+			await updateCard(db, cardId, { title, body_md, due_at });
 			return { ok: true };
 		} catch (e) {
 			return fail(400, { message: e instanceof Error ? e.message : 'update failed' });

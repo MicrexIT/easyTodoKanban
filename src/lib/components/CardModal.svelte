@@ -3,6 +3,7 @@
 	import { renderMarkdown, relativeTime } from '$lib/markdown';
 	import { enhance } from '$app/forms';
 	import AttachmentGallery from './AttachmentGallery.svelte';
+	import DeadlineFields from './DeadlineFields.svelte';
 
 	interface Props {
 		open: boolean;
@@ -75,6 +76,7 @@
 			<input type="hidden" name="cardId" value={cardId} />
 			<div class="modal-body">
 				<input class="title-input" name="title" bind:value={title} required />
+				<DeadlineFields dueAt={card.due_at} idPrefix={`modal-card-${cardId}`} />
 				<AttachmentGallery cardId={cardId} attachments={card.attachments} compact />
 				<div class="editor-tabs" role="tablist">
 					<button

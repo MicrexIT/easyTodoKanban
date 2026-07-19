@@ -40,10 +40,12 @@ export const actions: Actions = {
 		const db = getDb(event);
 		const data = await event.request.formData();
 		const cardId = Number(event.params.id);
+		const rawDueAt = data.get('due_at');
 		try {
 			await updateCard(db, cardId, {
 				title: String(data.get('title') ?? ''),
-				body_md: String(data.get('body_md') ?? '')
+				body_md: String(data.get('body_md') ?? ''),
+				due_at: rawDueAt === null ? undefined : String(rawDueAt) || null
 			});
 			return { ok: true };
 		} catch (e) {

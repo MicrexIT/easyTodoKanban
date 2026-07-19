@@ -15,6 +15,7 @@ import {
 	getCardAttachment,
 	listProjects,
 	moveCard,
+	normalizeDueAt,
 	renameColumn,
 	updateCard
 } from '@easytodo/db';
@@ -56,6 +57,22 @@ function truncateBody(body: string, max = 200): string {
 	return body.slice(0, max) + '…';
 }
 
+const dueAtSchema = z
+	.union([z.string(), z.null()])
+	.refine(
+		(value) => {
+			try {
+				normalizeDueAt(value);
+				return true;
+			} catch {
+				return false;
+			}
+		},
+		{
+			message: 'Use YYYY-MM-DD for all-day, an ISO 8601 UTC datetime ending in Z, or null'
+		}
+	);
+
 export function createKanbanServer(db: D1Database, media: R2Bucket) {
 	const server = new McpServer({
 		name: 'easytodo-kanban',
@@ -93,6 +110,7 @@ export function createKanbanServer(db: D1Database, media: R2Bucket) {
 							id: card.id,
 							title: card.title,
 							body_preview: truncateBody(card.body_md),
+							due_at: card.due_at,
 							updated_at: card.updated_at,
 							images: card.attachments.map(publicAttachment)
 						}))
@@ -130,6 +148,9 @@ export function createKanbanServer(db: D1Database, media: R2Bucket) {
 			column: z.union([z.string(), z.number()]).describe('Column name or id'),
 			title: z.string(),
 			body_md: z.string().optional(),
+			due_at: dueAtSchema
+				.optional()
+				.describe('All-day YYYY-MM-DD, UTC ISO datetime ending in Z, or null'),
 			top: z.boolean().optional()
 		},
 		async (args) => {
@@ -144,15 +165,18 @@ export function createKanbanServer(db: D1Database, media: R2Bucket) {
 
 	server.tool(
 		'update_card',
-		'Partial update of card title and/or body_md',
+		'Partial update of card title, body_md, and/or deadline',
 		{
 			card_id: z.number().int(),
 			title: z.string().optional(),
-			body_md: z.string().optional()
+			body_md: z.string().optional(),
+			due_at: dueAtSchema
+				.optional()
+				.describe('All-day YYYY-MM-DD, UTC ISO datetime ending in Z, or null to clear')
 		},
-		async ({ card_id, title, body_md }) => {
+		async ({ card_id, title, body_md, due_at }) => {
 			try {
-				const card = await updateCard(db, card_id, { title, body_md });
+				const card = await updateCard(db, card_id, { title, body_md, due_at });
 				return textResult(card);
 			} catch (e) {
 				return errorResult(e instanceof DbError ? e.message : String(e));

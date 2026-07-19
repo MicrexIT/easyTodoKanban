@@ -11,6 +11,8 @@
 	--accent: #2f6e5e;
 	--accent-soft: #2f6e5e22;
 	--danger: #a34b3d;
+	--overdue: #a34b3d;
+	--overdue-soft: #a34b3d18;
 	--hue-todo: #66707e;
 	--hue-doing: #b06e15;
 	--hue-done: #427e54;
@@ -34,6 +36,8 @@
 		--accent: #4fa98f;
 		--accent-soft: #4fa98f26;
 		--danger: #c46a5b;
+		--overdue: #df7868;
+		--overdue-soft: #df786824;
 		--hue-todo: #9aa4b1;
 		--hue-doing: #d6913c;
 		--hue-done: #6baa7e;
@@ -810,6 +814,26 @@ dialog.search-dialog::backdrop {
 .card-meta .id {
 	color: var(--hue, var(--ink-3));
 }
+.due-badge {
+	display: inline-flex;
+	align-items: center;
+	width: fit-content;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	background: var(--surface);
+	color: var(--ink-2);
+	font: 600 10px/1 var(--mono);
+	padding: 3px 6px;
+	white-space: nowrap;
+}
+.card-meta .due-badge {
+	margin-left: auto;
+}
+.due-badge.overdue {
+	border-color: color-mix(in srgb, var(--overdue) 38%, var(--line));
+	background: var(--overdue-soft);
+	color: var(--overdue);
+}
 
 /* svelte-dnd-action placeholder styled like .drop-slot */
 .cards :global(.dnd-placeholder),
@@ -898,6 +922,72 @@ dialog.card-modal::backdrop {
 }
 .modal-body {
 	padding: 16px;
+}
+.deadline-fields {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 8px;
+	margin: 0 0 14px;
+	padding: 10px 12px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: var(--surface);
+}
+.deadline-fields legend,
+.deadline-fields label span {
+	font: 10.5px/1.2 var(--mono);
+	color: var(--ink-3);
+	letter-spacing: 0.04em;
+}
+.deadline-fields legend {
+	padding: 0 4px;
+}
+.deadline-fields label {
+	display: grid;
+	gap: 5px;
+}
+.deadline-fields label:first-of-type {
+	flex: 1 1 160px;
+	min-width: 0;
+}
+.deadline-fields label:not(:first-of-type) {
+	flex: 1 1 120px;
+	min-width: 0;
+}
+.deadline-fields small {
+	font: inherit;
+	color: var(--ink-3);
+}
+.deadline-fields input[type='date'],
+.deadline-fields input[type='time'] {
+	width: 100%;
+	min-height: 34px;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	background: var(--card);
+	padding: 5px 8px;
+	font: 11.5px var(--mono);
+	color: var(--ink);
+	color-scheme: light dark;
+}
+.deadline-fields input:disabled {
+	opacity: 0.45;
+}
+.deadline-clear {
+	min-height: 34px;
+	border: 0;
+	background: none;
+	color: var(--ink-3);
+	font: 11px var(--mono);
+	cursor: pointer;
+}
+.deadline-clear:hover:not(:disabled) {
+	color: var(--overdue);
+}
+.deadline-clear:disabled {
+	opacity: 0.4;
+	cursor: default;
 }
 .title-input {
 	width: 100%;
@@ -1333,6 +1423,9 @@ dialog.board-manager::backdrop {
 	padding-bottom: 14px;
 	border-bottom: 1px solid var(--line);
 }
+.item-facts .due-badge {
+	margin-left: 8px;
+}
 .item-body {
 	padding: 18px 24px 24px;
 	font-size: 14.5px;
@@ -1408,6 +1501,9 @@ select.move {
 	.modal-body .title-input {
 		font-size: 24px;
 		padding-bottom: 16px;
+	}
+	.modal-body .deadline-fields {
+		max-width: 520px;
 	}
 	.editor-tab {
 		font-size: 12.5px;
